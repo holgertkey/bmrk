@@ -252,22 +252,21 @@ select_disk = ["d"]
 ## How the wrapper works
 
 `bmrk` writes its TUI to **stderr** (visible in the terminal) and the selected directory path to
-**stdout**. The wrapper captures stdout:
+**stdout**. The wrapper captures stdout with `set /p` (CMD) or `$()` (bash/PowerShell):
 
-- If output is a **single line that is a valid directory** → `cd` to it
-- Otherwise → print the output as-is (help text, version, bookmark list, confirmations)
+- If captured output is a **valid directory path** → `cd` to it
+- If output is **empty** (Esc pressed) → do nothing
+- Otherwise → print the output as-is (help, version, bookmark list, confirmations)
 
-This means all `bm` commands work correctly through the wrapper:
-
-| Command               | What bmrk outputs to stdout | Wrapper action |
-|-----------------------|------------------------------|----------------|
-| `bm` (TUI, press `q`) | `/selected/path`             | `cd` there     |
-| `bm myproject`        | `/bookmarked/path`           | `cd` there     |
-| `bm -bm`              | Bookmark list (multi-line)   | Print it       |
-| `bm -bm add work`     | `Bookmark 'work' added: …`   | Print it       |
-| `bm --help`           | Help text (multi-line)       | Print it       |
-| `bm --version`        | `bmrk 0.1.0`                 | Print it       |
-| `bm` (TUI, press Esc) | _(empty)_                    | Do nothing     |
+| Command               | bmrk stdout                | Wrapper action |
+|-----------------------|----------------------------|----------------|
+| `bm` (TUI → `q`)      | `/selected/path`           | `cd` there     |
+| `bm myproject`        | `/bookmarked/path`         | `cd` there     |
+| `bm -bm`              | `Bookmarks: …` (text)      | Print it       |
+| `bm -bm add work`     | `Bookmark 'work' added: …` | Print it       |
+| `bm --help`           | Help text                  | Print it       |
+| `bm --version`        | `bmrk 0.1.0`               | Print it       |
+| `bm` (TUI → Esc)      | _(empty)_                  | Do nothing     |
 
 ---
 
