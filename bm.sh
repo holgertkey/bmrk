@@ -12,14 +12,26 @@
 #
 #   — or inline (no extra file needed):
 #
-#   bm() { local r; r=$(bmrk "$@"); [ -d "$r" ] && cd "$r" || { [ -n "$r" ] && echo "$r"; }; }
+#   bm() { local r x="$PWD"; if [ "$1" = "-" ]; then [ -n "$BMRK_PREV_DIR" ] && { cd "$BMRK_PREV_DIR" && BMRK_PREV_DIR="$x"; } || { echo "bm: no previous directory" >&2; return 1; }; return; fi; r=$(bmrk "$@"); if [ -n "$r" ] && [ -d "$r" ]; then cd "$r" && BMRK_PREV_DIR="$x"; elif [ -n "$r" ]; then echo "$r"; fi; }
 #
 # fish — create ~/.config/fish/functions/bm.fish with:
 #
 #   function bm
+#       if test "$argv[1]" = "-"
+#           if test -n "$BMRK_PREV_DIR" -a -d "$BMRK_PREV_DIR"
+#               set prev $BMRK_PREV_DIR
+#               set -gx BMRK_PREV_DIR $PWD
+#               cd $prev
+#           else
+#               echo "bm: no previous directory" >&2; return 1
+#           end
+#           return
+#       end
 #       set r (bmrk $argv)
-#       if test -d "$r"; cd $r
-#       else if test -n "$r"; echo $r
+#       if test -d "$r"
+#           set -gx BMRK_PREV_DIR $PWD; cd $r
+#       else if test -n "$r"
+#           echo $r
 #       end
 #   end
 #
@@ -29,13 +41,29 @@
 #   # fish reloads automatically
 
 bm() {
-    local result exit_code
+    local result prev_dir="$PWD"
+
+    # Return to previous directory
+    if [ "$1" = "-" ]; then
+        if [ -n "$BMRK_PREV_DIR" ] && [ -d "$BMRK_PREV_DIR" ]; then
+            cd "$BMRK_PREV_DIR" || return 1
+            BMRK_PREV_DIR="$prev_dir"
+        else
+            echo "bm: no previous directory" >&2
+            return 1
+        fi
+        return
+    fi
+
     result=$(bmrk "$@")
-    exit_code=$?
+    local exit_code=$?
+
     if [ -n "$result" ] && [ -d "$result" ]; then
         cd "$result" || return 1
+        BMRK_PREV_DIR="$prev_dir"
     elif [ -n "$result" ]; then
         echo "$result"
     fi
+
     return $exit_code
 }
