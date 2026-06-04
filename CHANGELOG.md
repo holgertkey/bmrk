@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `bm.ps1` — PowerShell wrapper with correct stdout/stderr separation via temp file;
+  supports `bm -` (return to previous directory) and passthrough for `--help`, `--version`, `-bm`
+- `bm -` navigation in `bm.bat` (CMD wrapper) via `BMRK_PREV_DIR` environment variable
+
+### Fixed
+- `bm.bat`: directory navigation (`bm myproject`, `bm some\path`) was silently doing nothing
+  due to `cd` running in a subprocess when called from PowerShell; resolved by providing the
+  dedicated `bm.ps1` PowerShell wrapper instead
+
+### Changed
+- `bm.bat` rewritten: added passthrough handling for flags that should not trigger `cd`
+  (`-h`, `--help`, `--version`, `-bm`, `--bm`), proper exit-code propagation, and `bm -` support
+- `docs/installation.md` rewritten for bmrk (previously contained dtree content)
+- README: Windows PowerShell installation instructions updated to use `bm.ps1`
+
 ## [0.1.0] - 2026-06-04
 
 Initial release of **bmrk** — forked from [dtree](https://github.com/holgertkey/dtree) v1.3.0

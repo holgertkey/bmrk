@@ -1,300 +1,216 @@
 # Installation
 
-This guide covers different ways to install dtree on your system.
+## Step 1 — Install the `bmrk` binary
 
-## Prerequisites
-
-### Required
-
-- **Rust toolchain** (for building from source)
-  - Version 1.70 or later
-  - Install from [rustup.rs](https://rustup.rs/)
-
-### Optional
-
-- **Nerd Fonts** (for file type icons)
-  - Download from [nerdfonts.com](https://www.nerdfonts.com/)
-  - Install a font like `FiraCode Nerd Font` or `JetBrains Mono Nerd Font`
-  - Configure your terminal to use the font
-  - Enable in config: `show_icons = true`
-
-- **hexyl** (for binary file viewing)
-  ```bash
-  cargo install hexyl
-  ```
-
-## Installation Methods
-
-### Method 1: Build from Source (Recommended)
-
-This is currently the primary installation method:
+### From crates.io
 
 ```bash
-# Clone the repository
-git clone https://github.com/holgertkey/dtree.git
-cd dtree
+cargo install bmrk
+```
 
-# Build the release binary
+### From source
+
+```bash
+git clone https://github.com/holgertkey/bmrk.git
+cd bmrk
 cargo build --release
-
-# Install to user's bin directory
-mkdir -p ~/bin
-cp target/release/dtree ~/bin/
-
-# Or install system-wide
-sudo cp target/release/dtree /usr/local/bin/
 ```
 
-Make sure `~/bin` is in your PATH:
+The binary is at:
+- `target/release/bmrk` (Linux/macOS)
+- `target\release\bmrk.exe` (Windows)
 
-```bash
-# Add to ~/.bashrc or ~/.zshrc
-export PATH="$HOME/bin:$PATH"
-```
+---
 
-### Method 2: cargo install (Future)
+## Step 2 — Set up the `bm` wrapper
 
-Once published to crates.io:
+The `bm` wrapper is **required** for `cd` to work. A process cannot change its parent shell's
+directory directly — the wrapper captures `bmrk`'s stdout and calls `cd` in the current shell.
+This is the same approach used by `fzf`, `zoxide`, and `autojump`.
 
-```bash
-cargo install dtree
-```
+---
 
-### Method 3: Package Manager (Future)
+### Windows — PowerShell
 
-Package manager support is planned for:
+1. Copy `bmrk.exe` to a directory on your PATH (e.g. `C:\Users\<YourName>\bin\`).
 
-- **Arch Linux**: AUR package
-- **Homebrew**: `brew install dtree`
-- **apt/deb**: Debian package
-- **rpm**: Fedora package
+2. Open your PowerShell profile for editing:
+   ```powershell
+   notepad $PROFILE
+   ```
+   If the file does not exist yet, create it first:
+   ```powershell
+   New-Item -ItemType File -Force $PROFILE
+   ```
 
-## Bash Integration
+3. Add the wrapper to your profile — choose one option:
 
-For the best experience, add the `dt` wrapper function to your `~/.bashrc`:
+   **Option A — source the provided `bm.ps1` file (recommended):**
+   ```powershell
+   . "C:\path\to\bmrk\bm.ps1"
+   ```
 
-```bash
-dt() {
-  # Store current directory before navigation
-  local prev_dir="$PWD"
+   **Option B — inline function (no extra file needed):**
+   ```powershell
+   function bm {
+       if ($args.Count -eq 1 -and $args[0] -eq '-') {
+           if ($env:BMRK_PREV_DIR -and (Test-Path $env:BMRK_PREV_DIR -PathType Container)) {
+               $prev = $env:BMRK_PREV_DIR
+               $env:BMRK_PREV_DIR = $PWD.Path
+               Set-Location $prev
+           } else { Write-Error 'bm: no previous directory' }
+           return
+       }
+       if ($args.Count -ge 1 -and $args[0] -in '-h','--help','--version','-bm','--bm') {
+           & bmrk.exe @args; return
+       }
+       $t = [IO.Path]::GetTempFileName()
+       try {
+           & bmrk.exe @args > $t
+           if ($LASTEXITCODE -eq 0) {
+               $r = (Get-Content $t -Raw)?.Trim()
+               if ($r -and (Test-Path $r -PathType Container)) {
+                   $env:BMRK_PREV_DIR = $PWD.Path; Set-Location $r
+               } elseif ($r) { Write-Output $r }
+           }
+       } finally { Remove-Item $t -ErrorAction SilentlyContinue }
+   }
+   ```
 
-  # Handle special case: dt - (return to previous directory)
-  if [ "$1" = "-" ]; then
-    if [ -n "$DTREE_PREV_DIR" ] && [ -d "$DTREE_PREV_DIR" ]; then
-      cd "$DTREE_PREV_DIR" || return
-      export DTREE_PREV_DIR="$prev_dir"
-    else
-      echo "dt: no previous directory" >&2
-      return 1
-    fi
-    return
-  fi
+4. Reload the profile:
+   ```powershell
+   . $PROFILE
+   ```
 
-  # If flags or bookmark commands are passed, just run dtree directly without cd
-  case "$1" in
-    -h|--help|--version)
-      command dtree "$@"
-      return
-      ;;
-    -bm)
-      # Bookmark management commands - run directly
-      command dtree "$@"
-      return
-      ;;
-  esac
+5. Test:
+   ```powershell
+   bm --version
+   bm
+   ```
 
-  # For navigation: delegate path/bookmark resolution to dtree
-  # Capture stdout (path) separately from stderr (errors/warnings)
-  local result=$(command dtree "$@")
-  local exit_code=$?
+---
 
-  if [ $exit_code -ne 0 ]; then
-    # dtree already printed error to stderr
-    return $exit_code
-  fi
+### Windows — CMD
 
-  # Only cd if result is a valid directory
-  if [ -n "$result" ] && [ -d "$result" ]; then
-    cd "$result" || return
-    # Save previous directory for dt -
-    export DTREE_PREV_DIR="$prev_dir"
-  fi
-}
-```
+1. Copy `bmrk.exe` and `bm.bat` to the same directory on your PATH
+   (e.g. `C:\Users\<YourName>\bin\`).
 
-After adding, reload your shell:
+2. If that directory is not on your PATH yet:
+   ```
+   setx PATH "%PATH%;C:\Users\<YourName>\bin"
+   ```
+   Then open a new CMD window.
 
-```bash
-source ~/.bashrc
-```
+3. Test:
+   ```
+   bm --version
+   bm
+   ```
+
+---
+
+### Linux / macOS — bash
+
+1. Copy the binary to your PATH:
+   ```bash
+   cp target/release/bmrk ~/.local/bin/
+   # or: sudo cp target/release/bmrk /usr/local/bin/
+   ```
+
+2. Add the wrapper to `~/.bashrc` — choose one option:
+
+   **Option A — source the provided file:**
+   ```bash
+   echo '. /path/to/bmrk/bm.sh' >> ~/.bashrc
+   ```
+
+   **Option B — inline one-liner:**
+   ```bash
+   echo 'bm() { local r; r=$(bmrk "$@"); [ -d "$r" ] && cd "$r" || { [ -n "$r" ] && echo "$r"; }; }' >> ~/.bashrc
+   ```
+
+3. Reload:
+   ```bash
+   source ~/.bashrc
+   ```
+
+4. Test:
+   ```bash
+   bm --version
+   bm
+   ```
+
+---
+
+### Linux / macOS — zsh
+
+Same as bash, but edit `~/.zshrc` instead of `~/.bashrc`.
+
+---
+
+### Linux / macOS — fish
+
+1. Copy the binary to your PATH:
+   ```bash
+   cp target/release/bmrk ~/.local/bin/
+   ```
+
+2. Create `~/.config/fish/functions/bm.fish`:
+   ```fish
+   function bm
+       set r (bmrk $argv)
+       if test -d "$r"
+           cd $r
+       else if test -n "$r"
+           echo $r
+       end
+   end
+   ```
+
+3. Fish reloads functions automatically. Test:
+   ```bash
+   bm --version
+   bm
+   ```
+
+---
 
 ## Verification
 
-Test your installation:
+After installation, verify everything works:
 
 ```bash
-# Check version
-dtree --version
-
-# Launch from current directory
-dt
-
-# View a file
-dt -v README.md
-
-# Show help
-dtree -h
+bm --version        # Should print: bmrk x.y.z
+bm -bm              # Should list bookmarks (empty on first run)
+bm                  # Should open the interactive TUI
 ```
 
-## Post-Installation Configuration
+---
 
-On first launch, dtree creates a configuration file:
+## Troubleshooting
 
-```
-~/.config/dtree/config.toml
-```
+### `bmrk: command not found`
 
-You can customize:
-
-- Colors and themes
-- Default editor and file manager
-- File preview limits
-- Keybindings
-- Icon display
-
-See [Configuration](./configuration.md) for details.
-
-## Updating
-
-### From Source
-
+Check that `bmrk.exe` / `bmrk` is on your PATH:
 ```bash
-cd dtree
-git pull
-cargo build --release
-cp target/release/dtree ~/bin/  # or /usr/local/bin/
-```
-
-### Using cargo (Future)
-
-```bash
-cargo install --force dtree
-```
-
-## Uninstallation
-
-### Remove Binary
-
-```bash
-# User installation
-rm ~/bin/dtree
-
-# System installation
-sudo rm /usr/local/bin/dtree
-```
-
-### Remove Configuration
-
-```bash
-rm -rf ~/.config/dtree
-```
-
-### Remove Bash Integration
-
-Remove the `dt()` function from your `~/.bashrc`.
-
-## Troubleshooting Installation
-
-### Rust Not Found
-
-```bash
-# Install Rust
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-source ~/.cargo/env
-```
-
-### Build Errors
-
-```bash
-# Update Rust
-rustup update
-
-# Clean and rebuild
-cargo clean
-cargo build --release
-```
-
-### Binary Not Found After Installation
-
-Check your PATH:
-
-```bash
+# Linux/macOS
+which bmrk
 echo $PATH
 
-# Add ~/bin to PATH if not present
-echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
-source ~/.bashrc
+# PowerShell
+(Get-Command bmrk).Source
+$env:PATH
 ```
 
-### Icons Not Showing
+### `bm` opens but directory doesn't change after selecting
 
-1. Install a Nerd Font
-2. Configure your terminal to use it
-3. Enable in config: `show_icons = true`
-4. Restart your terminal
+You are likely running `bm.bat` from PowerShell. Use the PowerShell wrapper (`bm.ps1` or the
+inline function above) instead — `.bat` files run as subprocesses in PowerShell and cannot change
+the parent session's directory.
 
-### Clipboard Not Working
+### Bookmarks file location
 
-Install xclip (Linux) or use native clipboard:
+Bookmarks are stored as JSON and created automatically on first use:
 
-```bash
-# Ubuntu/Debian
-sudo apt install xclip
-
-# Arch
-sudo pacman -S xclip
-
-# Fedora
-sudo dnf install xclip
-```
-
-## Platform-Specific Notes
-
-### Linux
-
-Tested on:
-- Ubuntu 20.04+
-- Arch Linux
-- Fedora 35+
-
-### macOS
-
-Should work but untested. Potential issues:
-- Clipboard integration may need adjustments
-- Terminal compatibility
-
-### Windows
-
-Not currently supported. WSL recommended:
-
-```bash
-# In WSL
-cargo build --release
-cp target/release/dtree ~/bin/
-```
-
-## Dependencies
-
-dtree has minimal runtime dependencies:
-
-- **Terminal with ANSI color support**
-- **UTF-8 locale**
-- **Mouse support** (optional, for mouse features)
-
-Most modern terminals support these out of the box.
-
-## Next Steps
-
-- [Getting Started](./getting-started.md) - Quick start guide
-- [Configuration](./configuration.md) - Customize dtree
-- [Bash Integration](./bash-integration.md) - Advanced shell integration
+- **Windows**: `%APPDATA%\bmrk\bookmarks.json`
+- **Linux/macOS**: `~/.config/bmrk/bookmarks.json`

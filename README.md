@@ -89,15 +89,37 @@ The wrapper is required for `cd` to work. Choose your shell below.
    New-Item -ItemType File -Force $PROFILE
    ```
 
-3. Add this function to the profile:
+3. Add the wrapper to your profile. Choose one option:
+
+   **Option A — source the provided file (recommended):**
+   ```powershell
+   . "C:\path\to\bmrk\bm.ps1"
+   ```
+
+   **Option B — inline function (no extra file needed):**
    ```powershell
    function bm {
-       $result = & bmrk @args
-       if ($result -and (Test-Path $result -PathType Container)) {
-           Set-Location $result
-       } elseif ($result) {
-           Write-Output $result
+       if ($args.Count -eq 1 -and $args[0] -eq '-') {
+           if ($env:BMRK_PREV_DIR -and (Test-Path $env:BMRK_PREV_DIR -PathType Container)) {
+               $prev = $env:BMRK_PREV_DIR
+               $env:BMRK_PREV_DIR = $PWD.Path
+               Set-Location $prev
+           } else { Write-Error 'bm: no previous directory' }
+           return
        }
+       if ($args.Count -ge 1 -and $args[0] -in '-h','--help','--version','-bm','--bm') {
+           & bmrk.exe @args; return
+       }
+       $t = [IO.Path]::GetTempFileName()
+       try {
+           & bmrk.exe @args > $t
+           if ($LASTEXITCODE -eq 0) {
+               $r = (Get-Content $t -Raw)?.Trim()
+               if ($r -and (Test-Path $r -PathType Container)) {
+                   $env:BMRK_PREV_DIR = $PWD.Path; Set-Location $r
+               } elseif ($r) { Write-Output $r }
+           }
+       } finally { Remove-Item $t -ErrorAction SilentlyContinue }
    }
    ```
 
@@ -190,6 +212,7 @@ Same as bash, but edit `~/.zshrc` instead of `~/.bashrc`.
 bm                          # Open interactive TUI (compact, 8 rows)
 bm /path/to/dir             # Open TUI at specific directory
 bm myproject                # Jump to bookmark (cd directly, no TUI)
+bm -                        # Return to previous directory
 
 # Bookmark management
 bm -bm                      # List all bookmarks
@@ -252,21 +275,22 @@ select_disk = ["d"]
 ## How the wrapper works
 
 `bmrk` writes its TUI to **stderr** (visible in the terminal) and the selected directory path to
-**stdout**. The wrapper captures stdout with `set /p` (CMD) or `$()` (bash/PowerShell):
+**stdout**. The wrapper captures stdout via a temp file (CMD: `set /p`; PowerShell/bash: `$t`):
 
-- If captured output is a **valid directory path** → `cd` to it
+- If captured output is a **valid directory path** → `cd` to it (saves previous dir for `bm -`)
 - If output is **empty** (Esc pressed) → do nothing
-- Otherwise → print the output as-is (help, version, bookmark list, confirmations)
+- Otherwise → print the output as-is (help, version, bookmark list)
 
-| Command               | bmrk stdout                | Wrapper action |
-|-----------------------|----------------------------|----------------|
-| `bm` (TUI → `q`)      | `/selected/path`           | `cd` there     |
-| `bm myproject`        | `/bookmarked/path`         | `cd` there     |
-| `bm -bm`              | `Bookmarks: …` (text)      | Print it       |
-| `bm -bm add work`     | `Bookmark 'work' added: …` | Print it       |
-| `bm --help`           | Help text                  | Print it       |
-| `bm --version`        | `bmrk 0.1.0`               | Print it       |
-| `bm` (TUI → Esc)      | _(empty)_                  | Do nothing     |
+| Command               | bmrk stdout                | Wrapper action        |
+|-----------------------|----------------------------|-----------------------|
+| `bm` (TUI → `q`)      | `/selected/path`           | `cd` there            |
+| `bm myproject`        | `/bookmarked/path`         | `cd` there            |
+| `bm -`                | _(no bmrk call)_           | `cd` to previous dir  |
+| `bm -bm`              | `Bookmarks: …` (text)      | Print it (passthrough)|
+| `bm -bm add work`     | `Bookmark 'work' added: …` | Print it (passthrough)|
+| `bm --help`           | Help text                  | Print it (passthrough)|
+| `bm --version`        | `bmrk 0.1.0`               | Print it (passthrough)|
+| `bm` (TUI → Esc)      | _(empty)_                  | Do nothing            |
 
 ---
 
