@@ -1,0 +1,707 @@
+use anyhow::{Context, Result};
+use crossterm::event::KeyCode;
+use ratatui::style::Color;
+use serde::{Deserialize, Serialize};
+use std::fs;
+use std::path::{Path, PathBuf};
+
+use crate::theme::ThemeConfig;
+
+/// Appearance configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AppearanceConfig {
+    /// Theme name (can be expanded later for preset themes)
+    #[serde(default = "default_theme")]
+    pub theme: String,
+
+    /// Show file type icons (requires nerd fonts)
+    #[serde(default = "default_show_icons")]
+    pub show_icons: bool,
+
+    /// Split position percentage (20-80)
+    #[serde(default = "default_split_position")]
+    pub split_position: u16,
+
+    /// Show line numbers in fullscreen viewer by default
+    #[serde(default = "default_show_line_numbers")]
+    pub show_line_numbers: bool,
+
+    /// Enable syntax highlighting for code files
+    #[serde(default = "default_enable_syntax_highlighting")]
+    pub enable_syntax_highlighting: bool,
+
+    /// Syntax highlighting theme name
+    #[serde(default = "default_syntax_theme")]
+    pub syntax_theme: String,
+
+    /// Maximum filename length before middle-truncation (0 = disabled)
+    #[serde(default = "default_max_name_length")]
+    pub max_name_length: usize,
+
+    /// Custom theme colors
+    #[serde(default)]
+    pub colors: ThemeConfig,
+}
+
+impl Default for AppearanceConfig {
+    fn default() -> Self {
+        Self {
+            theme: default_theme(),
+            show_icons: default_show_icons(),
+            split_position: default_split_position(),
+            show_line_numbers: default_show_line_numbers(),
+            enable_syntax_highlighting: default_enable_syntax_highlighting(),
+            syntax_theme: default_syntax_theme(),
+            max_name_length: default_max_name_length(),
+            colors: ThemeConfig::default(),
+        }
+    }
+}
+
+fn default_theme() -> String {
+    "default".to_string()
+}
+fn default_show_icons() -> bool {
+    false
+}
+fn default_split_position() -> u16 {
+    20
+}
+fn default_show_line_numbers() -> bool {
+    false
+}
+fn default_enable_syntax_highlighting() -> bool {
+    true
+}
+fn default_syntax_theme() -> String {
+    "base16-ocean.dark".to_string()
+}
+fn default_max_name_length() -> usize {
+    30
+}
+
+/// Behavior configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BehaviorConfig {
+    /// Maximum number of lines to read from files
+    #[serde(default = "default_max_file_lines")]
+    pub max_file_lines: usize,
+
+    /// Show hidden files (dotfiles)
+    #[serde(default = "default_show_hidden")]
+    pub show_hidden: bool,
+
+    /// Follow symbolic links
+    #[serde(default = "default_follow_symlinks")]
+    pub follow_symlinks: bool,
+
+    /// Double-click timeout in milliseconds
+    #[serde(default = "default_double_click_timeout")]
+    pub double_click_timeout_ms: u64,
+
+    /// External editor command for opening files
+    #[serde(default = "default_editor")]
+    pub editor: String,
+
+    /// External file manager command
+    #[serde(default = "default_file_manager")]
+    pub file_manager: String,
+
+    /// External hex editor for viewing binary files
+    #[serde(default = "default_hex_editor")]
+    pub hex_editor: String,
+
+    /// Wrap long lines in file viewer (true = wrap, false = truncate)
+    #[serde(default = "default_wrap_lines")]
+    pub wrap_lines: bool,
+
+    /// Number of lines to scroll with mouse wheel in file viewer mode
+    #[serde(default = "default_mouse_scroll_lines")]
+    pub mouse_scroll_lines: usize,
+}
+
+impl Default for BehaviorConfig {
+    fn default() -> Self {
+        Self {
+            max_file_lines: default_max_file_lines(),
+            show_hidden: default_show_hidden(),
+            follow_symlinks: default_follow_symlinks(),
+            double_click_timeout_ms: default_double_click_timeout(),
+            editor: default_editor(),
+            file_manager: default_file_manager(),
+            hex_editor: default_hex_editor(),
+            wrap_lines: default_wrap_lines(),
+            mouse_scroll_lines: default_mouse_scroll_lines(),
+        }
+    }
+}
+
+fn default_max_file_lines() -> usize {
+    10000
+}
+fn default_show_hidden() -> bool {
+    true
+}
+fn default_follow_symlinks() -> bool {
+    true
+}
+fn default_double_click_timeout() -> u64 {
+    500
+}
+#[cfg(unix)]
+fn default_editor() -> String {
+    std::env::var("EDITOR").unwrap_or_else(|_| "nano".to_string())
+}
+
+#[cfg(windows)]
+fn default_editor() -> String {
+    // Try to find VS Code first, fallback to notepad
+    if which::which("code").is_ok() {
+        "code".to_string()
+    } else {
+        "notepad.exe".to_string()
+    }
+}
+
+#[cfg(unix)]
+fn default_file_manager() -> String {
+    "xdg-open".to_string()
+}
+
+#[cfg(windows)]
+fn default_file_manager() -> String {
+    "explorer.exe".to_string()
+}
+
+#[cfg(unix)]
+fn default_hex_editor() -> String {
+    "hexyl".to_string()
+}
+
+#[cfg(windows)]
+fn default_hex_editor() -> String {
+    // VS Code has hex editor extensions
+    if which::which("code").is_ok() {
+        "code".to_string()
+    } else {
+        "notepad.exe".to_string()
+    }
+}
+fn default_wrap_lines() -> bool {
+    true
+}
+fn default_mouse_scroll_lines() -> usize {
+    5
+}
+
+/// Keybindings configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KeybindingsConfig {
+    /// Keys to quit the application
+    #[serde(default = "default_quit_keys")]
+    pub quit: Vec<String>,
+
+    /// Keys to toggle search mode
+    #[serde(default = "default_search_keys")]
+    pub search: Vec<String>,
+
+    /// Keys to toggle file viewer
+    #[serde(default = "default_toggle_files_keys")]
+    pub toggle_files: Vec<String>,
+
+    /// Keys to toggle help screen
+    #[serde(default = "default_toggle_help_keys")]
+    pub toggle_help: Vec<String>,
+
+    /// Keys to copy path to clipboard
+    #[serde(default = "default_copy_path_keys")]
+    pub copy_path: Vec<String>,
+
+    /// Keys to open file in external editor
+    #[serde(default = "default_open_editor_keys")]
+    pub open_editor: Vec<String>,
+
+    /// Keys to open in file manager
+    #[serde(default = "default_open_file_manager_keys")]
+    pub open_file_manager: Vec<String>,
+
+    /// Keys to create bookmark
+    #[serde(default = "default_create_bookmark_keys")]
+    pub create_bookmark: Vec<String>,
+
+    /// Keys to select bookmark
+    #[serde(default = "default_select_bookmark_keys")]
+    pub select_bookmark: Vec<String>,
+
+    /// Keys to toggle line numbers in fullscreen viewer
+    #[serde(default = "default_show_line_numbers_keys")]
+    pub show_line_numbers: Vec<String>,
+
+    /// Keys to toggle line wrapping in fullscreen viewer
+    #[serde(default = "default_toggle_wrap_keys")]
+    pub toggle_wrap: Vec<String>,
+
+    /// Keys to enter visual selection mode (fullscreen viewer)
+    #[serde(default = "default_visual_mode_keys")]
+    pub visual_mode: Vec<String>,
+
+    /// Keys to copy selection in visual mode
+    #[serde(default = "default_visual_copy_keys")]
+    pub visual_copy: Vec<String>,
+
+    /// Keys to open disk selection panel
+    #[serde(default = "default_select_disk_keys")]
+    pub select_disk: Vec<String>,
+}
+
+impl Default for KeybindingsConfig {
+    fn default() -> Self {
+        Self {
+            quit: default_quit_keys(),
+            search: default_search_keys(),
+            toggle_files: default_toggle_files_keys(),
+            toggle_help: default_toggle_help_keys(),
+            copy_path: default_copy_path_keys(),
+            open_editor: default_open_editor_keys(),
+            open_file_manager: default_open_file_manager_keys(),
+            create_bookmark: default_create_bookmark_keys(),
+            select_bookmark: default_select_bookmark_keys(),
+            show_line_numbers: default_show_line_numbers_keys(),
+            toggle_wrap: default_toggle_wrap_keys(),
+            visual_mode: default_visual_mode_keys(),
+            visual_copy: default_visual_copy_keys(),
+            select_disk: default_select_disk_keys(),
+        }
+    }
+}
+
+fn default_quit_keys() -> Vec<String> {
+    vec!["q".to_string(), "Esc".to_string()]
+}
+fn default_search_keys() -> Vec<String> {
+    vec!["/".to_string()]
+}
+fn default_toggle_files_keys() -> Vec<String> {
+    vec!["s".to_string()]
+}
+fn default_toggle_help_keys() -> Vec<String> {
+    vec!["i".to_string()]
+}
+fn default_copy_path_keys() -> Vec<String> {
+    vec!["c".to_string()]
+}
+fn default_open_editor_keys() -> Vec<String> {
+    vec!["e".to_string()]
+}
+fn default_open_file_manager_keys() -> Vec<String> {
+    vec!["o".to_string()]
+}
+fn default_create_bookmark_keys() -> Vec<String> {
+    vec!["m".to_string()]
+}
+fn default_select_bookmark_keys() -> Vec<String> {
+    vec!["'".to_string()]
+}
+fn default_show_line_numbers_keys() -> Vec<String> {
+    vec!["l".to_string()]
+}
+fn default_toggle_wrap_keys() -> Vec<String> {
+    vec!["w".to_string()]
+}
+fn default_visual_mode_keys() -> Vec<String> {
+    vec!["V".to_string()]
+}
+fn default_visual_copy_keys() -> Vec<String> {
+    vec!["y".to_string(), "Y".to_string()]
+}
+fn default_select_disk_keys() -> Vec<String> {
+    vec!["d".to_string()]
+}
+
+impl KeybindingsConfig {
+    /// Check if a key matches any of the configured keys in the list
+    fn matches_key(&self, key: KeyCode, configured_keys: &[String]) -> bool {
+        let key_str = match key {
+            KeyCode::Char(c) => c.to_string(),
+            KeyCode::Esc => "Esc".to_string(),
+            KeyCode::Enter => "Enter".to_string(),
+            KeyCode::Backspace => "Backspace".to_string(),
+            KeyCode::Left => "Left".to_string(),
+            KeyCode::Right => "Right".to_string(),
+            KeyCode::Up => "Up".to_string(),
+            KeyCode::Down => "Down".to_string(),
+            KeyCode::Tab => "Tab".to_string(),
+            KeyCode::Delete => "Delete".to_string(),
+            KeyCode::Home => "Home".to_string(),
+            KeyCode::End => "End".to_string(),
+            KeyCode::PageUp => "PageUp".to_string(),
+            KeyCode::PageDown => "PageDown".to_string(),
+            _ => return false,
+        };
+
+        configured_keys
+            .iter()
+            .any(|k| k.eq_ignore_ascii_case(&key_str))
+    }
+
+    pub fn is_search(&self, key: KeyCode) -> bool {
+        self.matches_key(key, &self.search)
+    }
+
+    pub fn is_toggle_files(&self, key: KeyCode) -> bool {
+        self.matches_key(key, &self.toggle_files)
+    }
+
+    pub fn is_toggle_help(&self, key: KeyCode) -> bool {
+        self.matches_key(key, &self.toggle_help)
+    }
+
+    pub fn is_copy_path(&self, key: KeyCode) -> bool {
+        self.matches_key(key, &self.copy_path)
+    }
+
+    pub fn is_open_editor(&self, key: KeyCode) -> bool {
+        self.matches_key(key, &self.open_editor)
+    }
+
+    pub fn is_open_file_manager(&self, key: KeyCode) -> bool {
+        self.matches_key(key, &self.open_file_manager)
+    }
+
+    pub fn is_create_bookmark(&self, key: KeyCode) -> bool {
+        self.matches_key(key, &self.create_bookmark)
+    }
+
+    pub fn is_select_bookmark(&self, key: KeyCode) -> bool {
+        self.matches_key(key, &self.select_bookmark)
+    }
+
+    pub fn is_show_line_numbers(&self, key: KeyCode) -> bool {
+        self.matches_key(key, &self.show_line_numbers)
+    }
+
+    pub fn is_toggle_wrap(&self, key: KeyCode) -> bool {
+        self.matches_key(key, &self.toggle_wrap)
+    }
+
+    pub fn is_visual_mode(&self, key: KeyCode) -> bool {
+        self.matches_key(key, &self.visual_mode)
+    }
+
+    pub fn is_visual_copy(&self, key: KeyCode) -> bool {
+        self.matches_key(key, &self.visual_copy)
+    }
+
+    pub fn is_select_disk(&self, key: KeyCode) -> bool {
+        self.matches_key(key, &self.select_disk)
+    }
+}
+
+/// Main configuration structure
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct Config {
+    #[serde(default)]
+    pub appearance: AppearanceConfig,
+
+    #[serde(default)]
+    pub behavior: BehaviorConfig,
+
+    #[serde(default)]
+    pub keybindings: KeybindingsConfig,
+}
+
+impl Config {
+    /// Parse a color string to ratatui Color
+    pub fn parse_color(color_str: &str) -> Color {
+        ThemeConfig::parse_color(color_str)
+    }
+
+    /// Get a color value (guaranteed to be Some after load())
+    pub fn get_color(opt: &Option<String>) -> &str {
+        opt.as_ref()
+            .expect("Color should be resolved after config load")
+    }
+
+    /// Load configuration from a file
+    pub fn from_file(path: &Path) -> Result<Self> {
+        let content = fs::read_to_string(path)
+            .with_context(|| format!("Failed to read config file: {}", path.display()))?;
+
+        let config: Config = toml::from_str(&content)
+            .with_context(|| format!("Failed to parse config file: {}", path.display()))?;
+
+        Ok(config)
+    }
+
+    /// Get the global config file path
+    /// Unix: ~/.config/dtree/config.toml
+    /// Windows: %APPDATA%\dtree\config.toml
+    pub fn global_config_path() -> Option<PathBuf> {
+        dirs::config_dir().map(|p| p.join("dtree").join("config.toml"))
+    }
+
+    /// Load configuration with fallback order:
+    /// 1. Global config (Unix: ~/.config/dtree/config.toml, Windows: %APPDATA%\dtree\config.toml)
+    /// 2. Default config (if file is missing or has errors)
+    ///
+    /// If config file doesn't exist, it will be created automatically with default values.
+    /// If config file has parse errors, returns an error with details.
+    pub fn load() -> anyhow::Result<Self> {
+        let mut config = Config::default();
+
+        // Get global config path
+        if let Some(global_path) = Self::global_config_path() {
+            // Create config file if it doesn't exist
+            if !global_path.exists() {
+                // Silently create default config file
+                let _ = Self::create_default_file(&global_path);
+            }
+
+            // Load config from file
+            if global_path.exists() {
+                match Self::from_file(&global_path) {
+                    Ok(global_config) => {
+                        config = global_config;
+                    }
+                    Err(e) => {
+                        // Return error with detailed message
+                        anyhow::bail!(
+                            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\
+                            ⚠  Configuration file error!\n\
+                            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\
+                            \n\
+                            Config file: {}\n\
+                            \n\
+                            Error details:\n\
+                            {:#}\n\
+                            \n\
+                            To fix:\n\
+                              1. Edit the config file and fix the syntax error\n\
+                              2. Or delete the file - it will be recreated with defaults\n\
+                            \n\
+                            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+                            global_path.display(),
+                            e
+                        );
+                    }
+                }
+            }
+        }
+
+        // Apply color resolution:
+        // 1. Use explicitly set color from config file (if Some)
+        // 2. Otherwise, use preset theme color (if theme is set and preset has color)
+        // 3. Otherwise, use fallback default color
+        let preset = ThemeConfig::get_preset_theme(&config.appearance.theme);
+        let fallback = ThemeConfig::fallback_colors();
+
+        // Helper macro to apply color resolution
+        macro_rules! resolve_color {
+            ($field:ident) => {
+                config.appearance.colors.$field = config
+                    .appearance
+                    .colors
+                    .$field
+                    .or_else(|| preset.as_ref().and_then(|p| p.$field.clone()))
+                    .or_else(|| fallback.$field.clone());
+            };
+        }
+
+        resolve_color!(selected_color);
+        resolve_color!(directory_color);
+        resolve_color!(file_color);
+        resolve_color!(border_color);
+        resolve_color!(error_color);
+        resolve_color!(highlight_color);
+        resolve_color!(file_search_highlight_color);
+        resolve_color!(cursor_color);
+        resolve_color!(tree_cursor_color);
+        resolve_color!(tree_cursor_bg_color);
+        resolve_color!(main_border_color);
+        resolve_color!(panel_border_color);
+        resolve_color!(background_color);
+
+        Ok(config)
+    }
+
+    /// Create a default config file with comments
+    pub fn create_default_file(path: &Path) -> Result<()> {
+        // Get platform-specific defaults
+        let editor = default_editor();
+        let file_manager = default_file_manager();
+        let hex_editor = default_hex_editor();
+
+        let default_config = format!(
+            r#"# dtree configuration file
+# This file uses TOML format: https://toml.io
+
+[appearance]
+# Theme name - preset color schemes
+# Available themes:
+#   "default"    - Classic terminal colors (blue dirs, cyan selection)
+#   "gruvbox"    - Warm, high contrast theme inspired by Gruvbox
+#   "nord"       - Cold, muted colors inspired by Nord theme
+#   "tokyonight" - Modern dark theme with vibrant colors
+#   "dracula"    - Popular dark theme with high contrast
+#   "obsidian"   - Dark theme inspired by Obsidian app with subtle cursor
+#
+# You can override individual colors in [appearance.colors] section below
+# Preset themes provide a good starting point with harmonious color palettes
+theme = "default"
+
+# Show file type icons (requires nerd fonts)
+show_icons = false
+
+# Split position for file viewer (20-80, percentage)
+split_position = 20
+
+# Show line numbers in fullscreen viewer by default (toggle with 'l' key)
+show_line_numbers = false
+
+# Enable syntax highlighting for code files
+enable_syntax_highlighting = true
+
+# Syntax highlighting theme
+# Available themes: "base16-ocean.dark", "base16-ocean.light", "InspiredGitHub",
+#                   "Solarized (dark)", "Solarized (light)", "Monokai Extended"
+syntax_theme = "base16-ocean.dark"
+
+# Maximum filename length in the tree before middle-truncation
+# If a name exceeds this length, the middle is replaced with "..."
+# Example: "very_long_project_name.rs" -> "very_long_pro...ame.rs"
+# Set to 0 to disable truncation
+max_name_length = 30
+
+# Custom theme colors
+# These colors override the preset theme colors above
+# By default, all colors are commented out to use the preset theme
+# Uncomment and modify any color to override the theme
+[appearance.colors]
+# Color formats:
+#   - Color names: black, red, green, yellow, blue, magenta, cyan, gray, white
+#   - RGB hex: #RRGGBB (e.g., #fe8019)
+#   - Indexed: 0-255 (256-color palette)
+#   - "reset" - use terminal default color
+#
+# selected_color = "cyan"           # Color for selected item text
+# directory_color = "gray"          # Color for directory names
+# file_color = "white"              # Color for file names
+# border_color = "gray"             # Color for UI borders
+# error_color = "red"               # Color for error messages
+# highlight_color = "yellow"        # Color for fuzzy search character highlighting (directory search)
+# file_search_highlight_color = "yellow"  # Color for file content search highlighting
+# cursor_color = "yellow"           # Cursor highlight for search & bookmarks
+# tree_cursor_color = "dim"         # Cursor highlight for tree ("dim" = no color, just dimming)
+# tree_cursor_bg_color = "dim"      # Cursor background for tree ("dim" = no background color)
+# main_border_color = "gray"        # Main window border color
+# panel_border_color = "cyan"       # Panel borders (search, bookmarks)
+# background_color = "reset"        # Background color ("reset" = terminal default)
+
+[behavior]
+# Maximum number of lines to read from files
+max_file_lines = 10000
+
+# Show hidden files (dotfiles)
+show_hidden = true
+
+# Follow symbolic links
+follow_symlinks = true
+
+# Double-click timeout in milliseconds
+double_click_timeout_ms = 500
+
+# External editor for opening files (press 'e' to open)
+# Platform-specific defaults: Unix: $EDITOR or nano, Windows: VS Code or Notepad
+# Popular options:
+#   - Terminal editors: "nvim", "vim", "nano", "emacs", "micro", "helix"
+#   - GUI editors (if terminal wrapper available): "code", "subl", "gedit"
+editor = "{}"
+
+# External file manager (press 'o' to open)
+# Platform-specific defaults: Unix: xdg-open, Windows: explorer.exe
+# Popular terminal file managers:
+#   - "mc"      - Midnight Commander (classic two-panel interface)
+#   - "ranger"  - Vi-like file manager with image preview support
+#   - "nnn"     - Fast and minimal file manager
+#   - "lf"      - Terminal file manager inspired by ranger
+#   - "vifm"    - Vi-like file manager with two panels
+#   - "broot"   - Navigate directories with fuzzy search
+#   - "yazi"    - Modern terminal file manager
+file_manager = "{}"
+
+# External hex editor for binary files (press 'e' on binary file in fullscreen mode)
+# Platform-specific defaults: Unix: hexyl, Windows: VS Code or Notepad
+# Popular hex viewers:
+#   - "mcview"  - Midnight Commander's internal viewer (recommended)
+#   - "hexyl"   - Modern, colorful hex viewer (install: cargo install hexyl)
+#   - "xxd"     - Standard hex dump utility (included with vim)
+#   - "hexdump" - Classic hex dump tool
+#   - "hd"      - Alias for hexdump -C
+hex_editor = "{}"
+
+# Wrap long lines in file viewer (press 'w' to toggle in fullscreen mode)
+# true  = Wrap long lines at word boundaries (default, better for reading text)
+# false = Truncate long lines with "..." indicator (better for code with long lines)
+wrap_lines = true
+
+# Number of lines to scroll with mouse wheel in file viewer mode
+# Default: 5 (balanced speed for comfortable scrolling)
+# Decrease to 1-2 for precise control, increase to 10+ for faster scrolling through large files
+mouse_scroll_lines = 5
+
+[keybindings]
+# Key bindings (each can have multiple keys)
+quit = ["q", "Esc"]
+search = ["/"]
+toggle_files = ["s"]
+toggle_help = ["i"]
+copy_path = ["c"]
+open_editor = ["e"]
+open_file_manager = ["o"]
+create_bookmark = ["m"]
+select_bookmark = ["'"]
+show_line_numbers = ["l"]
+toggle_wrap = ["w"]
+select_disk = ["d"]          
+visual_mode = ["V"]          # Enter/exit visual selection mode (Shift+V)
+visual_copy = ["y", "Y"]     # Copy selected lines to clipboard and exit
+"#,
+            editor, file_manager, hex_editor
+        );
+
+        // Create parent directory if it doesn't exist
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).with_context(|| {
+                format!("Failed to create config directory: {}", parent.display())
+            })?;
+        }
+
+        fs::write(path, default_config)
+            .with_context(|| format!("Failed to write config file: {}", path.display()))?;
+
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_default_config() {
+        let config = Config::default();
+        assert_eq!(config.appearance.split_position, 20);
+        assert_eq!(config.behavior.max_file_lines, 10000);
+        assert!(config.behavior.show_hidden);
+    }
+
+    #[test]
+    fn test_color_parsing() {
+        assert!(matches!(ThemeConfig::parse_color("red"), Color::Red));
+        assert!(matches!(ThemeConfig::parse_color("blue"), Color::Blue));
+        assert!(matches!(
+            ThemeConfig::parse_color("#FF0000"),
+            Color::Rgb(255, 0, 0)
+        ));
+    }
+}
