@@ -1,7 +1,10 @@
-BM - Bookmark Manager and Directory Navigator
+BMRK - Bookmark Manager and Directory Navigator
+
+  Binary:  bmrk
+  Wrapper: bm  (required for cd — see README for setup)
 
 DESCRIPTION
-  bm is a compact inline TUI for directory navigation and bookmark management.
+  bmrk is a compact inline TUI for directory navigation and bookmark management.
   It runs in 8 rows without taking over the terminal screen.
 
   COMPACT MODE (default)

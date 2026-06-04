@@ -1,17 +1,24 @@
 # bmrk Cheat Sheet
 
-Quick reference for `bm` — Bookmark Manager and Directory Navigator.
+Quick reference for `bm` — Bookmark Manager and Directory Navigator.  
+Binary: `bmrk` · Wrapper: `bm` (handles `cd` automatically).
 
 ---
 
 ## Installation
 
 ```bash
-cargo install bmrk
-# or from source:
-cargo build --release
-cp target/release/bm ~/bin/   # Linux/macOS
+cargo install bmrk            # installs bmrk binary
+
+# Linux/macOS — add wrapper to ~/.bashrc or ~/.zshrc:
+bm() { local r; r=$(bmrk "$@"); [ -d "$r" ] && cd "$r" || { [ -n "$r" ] && echo "$r"; }; }
+
+# Windows CMD — place bm.bat + bmrk.exe in the same PATH directory.
+# Windows PowerShell — add to $PROFILE:
+# function bm { $r = & bmrk @args; if ($r -and (Test-Path $r -PathType Container)) { Set-Location $r } elseif ($r) { Write-Output $r } }
 ```
+
+See README.md for detailed installation instructions.
 
 ---
 

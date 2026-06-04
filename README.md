@@ -10,78 +10,214 @@
 
 ## What is bmrk?
 
-**bmrk** (`bm` command) is a compact inline TUI that fits in 8 rows and never takes over your terminal screen. Navigate directories, manage bookmarks, search for files — all from the keyboard.
+**bmrk** is a compact inline TUI that fits in 8 rows and never takes over your terminal screen.
+Navigate directories, manage bookmarks, search for files — all from the keyboard.
 
-**Bookmarks are the core.** Save a directory with `m`, jump back with `bm myproject` from anywhere. No more retyping long paths.
+The binary is `bmrk`. The shell wrapper `bm` wraps it and handles `cd` automatically — because a
+process cannot change its parent shell's directory, a thin wrapper is required (the same approach
+used by `fzf`, `zoxide`, and `autojump`).
 
 ---
 
 ## Features
 
-- **Compact inline mode** — default launch uses only 8 rows, leaves terminal clean on exit
+- **Compact inline mode** — 8 rows, no fullscreen takeover, terminal fully restored on exit
 - **Bookmarks** — save and jump to favorite directories; `bm myproject` navigates instantly
-- **Interactive tree view** — visual directory navigation with expand/collapse
+- **Interactive tree view** — directory navigation with expand/collapse
 - **Fuzzy search** — fast asynchronous search with intelligent matching
 - **Disk selection** — browse and switch between all drives/mount points (`d` key)
 - **Mouse support** — click, double-click, scroll
-- **Customizable** — TOML configuration with full theme support
+- **Customizable** — TOML configuration with theme presets and custom colors
 
 ---
 
 ## Installation
 
-### From crates.io
+### Step 1 — Install the `bmrk` binary
 
+**From crates.io:**
 ```bash
 cargo install bmrk
 ```
 
-### From source
-
+**From source:**
 ```bash
 git clone https://github.com/holgertkey/bmrk.git
 cd bmrk
 cargo build --release
-cp target/release/bm ~/bin/   # Linux/macOS
-# or copy target\release\bm.exe to a directory on your PATH (Windows)
 ```
+
+The binary is at `target/release/bmrk` (Linux/macOS) or `target\release\bmrk.exe` (Windows).
+
+---
+
+### Step 2 — Set up the `bm` wrapper
+
+The wrapper is required for `cd` to work. Choose your shell below.
+
+---
+
+#### Windows — CMD
+
+1. Copy `bmrk.exe` and `bm.bat` to the same directory that is on your `PATH`
+   (e.g. `C:\Users\<YourName>\bin\`).
+
+2. If that directory is not on your PATH yet, add it:
+   ```
+   setx PATH "%PATH%;C:\Users\<YourName>\bin"
+   ```
+   Then open a new CMD window.
+
+3. Test:
+   ```
+   bm --version
+   bm
+   ```
+
+---
+
+#### Windows — PowerShell
+
+1. Copy `bmrk.exe` to a directory on your PATH (e.g. `C:\Users\<YourName>\bin\`).
+
+2. Open your PowerShell profile for editing:
+   ```powershell
+   notepad $PROFILE
+   ```
+   If the file does not exist yet, create it:
+   ```powershell
+   New-Item -ItemType File -Force $PROFILE
+   ```
+
+3. Add this function to the profile:
+   ```powershell
+   function bm {
+       $result = & bmrk @args
+       if ($result -and (Test-Path $result -PathType Container)) {
+           Set-Location $result
+       } elseif ($result) {
+           Write-Output $result
+       }
+   }
+   ```
+
+4. Reload the profile:
+   ```powershell
+   . $PROFILE
+   ```
+
+5. Test:
+   ```powershell
+   bm --version
+   bm
+   ```
+
+---
+
+#### Linux / macOS — bash
+
+1. Copy the `bmrk` binary to a directory on your PATH:
+   ```bash
+   cp target/release/bmrk ~/.local/bin/
+   # or: sudo cp target/release/bmrk /usr/local/bin/
+   ```
+
+2. Add the wrapper to `~/.bashrc` (choose one option):
+
+   **Option A — source the provided file:**
+   ```bash
+   echo 'source /path/to/bmrk/bm.sh' >> ~/.bashrc
+   ```
+
+   **Option B — inline one-liner (no extra file):**
+   ```bash
+   echo 'bm() { local r; r=$(bmrk "$@"); [ -d "$r" ] && cd "$r" || { [ -n "$r" ] && echo "$r"; }; }' >> ~/.bashrc
+   ```
+
+3. Reload:
+   ```bash
+   source ~/.bashrc
+   ```
+
+4. Test:
+   ```bash
+   bm --version
+   bm
+   ```
+
+---
+
+#### Linux / macOS — zsh
+
+Same as bash, but edit `~/.zshrc` instead of `~/.bashrc`.
+
+---
+
+#### Linux / macOS — fish
+
+1. Copy the binary to your PATH:
+   ```bash
+   cp target/release/bmrk ~/.local/bin/
+   ```
+
+2. Create the function file:
+   ```bash
+   mkdir -p ~/.config/fish/functions
+   ```
+   Create `~/.config/fish/functions/bm.fish` with this content:
+   ```fish
+   function bm
+       set r (bmrk $argv)
+       if test -d "$r"
+           cd $r
+       else if test -n "$r"
+           echo $r
+       end
+   end
+   ```
+
+3. Fish reloads functions automatically. Test:
+   ```bash
+   bm --version
+   bm
+   ```
 
 ---
 
 ## Usage
 
 ```bash
-bm                          # Open interactive TUI from current directory
-bm /path/to/dir             # Open TUI from specific directory
-bm myproject                # Jump to bookmark 'myproject' (prints path)
+bm                          # Open interactive TUI (compact, 8 rows)
+bm /path/to/dir             # Open TUI at specific directory
+bm myproject                # Jump to bookmark (cd directly, no TUI)
 
 # Bookmark management
 bm -bm                      # List all bookmarks
+bm -bm list                 # List all bookmarks
 bm -bm add work             # Save current directory as 'work'
 bm -bm add work /some/path  # Save specific path as 'work'
 bm -bm remove work          # Remove bookmark 'work'
-bm -bm list                 # List all bookmarks
 
 bm --version                # Print version
 bm -h / --help              # Print help
 ```
 
-### Keyboard shortcuts
+### Keyboard shortcuts (inside TUI)
 
-| Key | Action |
-|-----|--------|
-| `j` / `↓` | Move down |
-| `k` / `↑` | Move up |
-| `l` / `→` | Expand directory |
-| `h` / `←` | Collapse directory |
-| `u` / `Backspace` | Go to parent |
-| `Enter` | Go into directory |
-| `q` | Exit, print selected path |
-| `Esc` | Exit without output |
-| `/` | Search |
-| `m` | Create bookmark |
-| `'` | Select bookmark |
-| `d` | Disk selection |
+| Key              | Action                         |
+|------------------|--------------------------------|
+| `j` / `↓`        | Move down                      |
+| `k` / `↑`        | Move up                        |
+| `l` / `→`        | Expand directory               |
+| `h` / `←`        | Collapse directory             |
+| `u` / `Backspace`| Go to parent                   |
+| `Enter`          | Go into directory (change root)|
+| `q`              | Exit and cd to selected dir    |
+| `Esc`            | Exit without cd                |
+| `/`              | Search                         |
+| `m`              | Create bookmark                |
+| `'`              | Select bookmark                |
+| `d`              | Disk selection                 |
 
 ---
 
@@ -92,14 +228,12 @@ Config file is created automatically on first run:
 - **Linux/macOS**: `~/.config/bmrk/config.toml`
 - **Windows**: `%APPDATA%\bmrk\config.toml`
 
-Bookmarks are stored in the same directory as `bookmarks.json`.
-
-Example config:
+Bookmarks are stored as `bookmarks.json` in the same directory.
 
 ```toml
 [appearance]
-theme = "default"   # default, gruvbox, nord, tokyonight, dracula, obsidian
-max_name_length = 30
+theme = "default"       # default, gruvbox, nord, tokyonight, dracula, obsidian
+max_name_length = 30    # Truncate long names in the middle (0 = disabled)
 
 [behavior]
 show_hidden = true
@@ -112,6 +246,28 @@ create_bookmark = ["m"]
 select_bookmark = ["'"]
 select_disk = ["d"]
 ```
+
+---
+
+## How the wrapper works
+
+`bmrk` writes its TUI to **stderr** (visible in the terminal) and the selected directory path to
+**stdout**. The wrapper captures stdout:
+
+- If output is a **single line that is a valid directory** → `cd` to it
+- Otherwise → print the output as-is (help text, version, bookmark list, confirmations)
+
+This means all `bm` commands work correctly through the wrapper:
+
+| Command               | What bmrk outputs to stdout | Wrapper action |
+|-----------------------|------------------------------|----------------|
+| `bm` (TUI, press `q`) | `/selected/path`             | `cd` there     |
+| `bm myproject`        | `/bookmarked/path`           | `cd` there     |
+| `bm -bm`              | Bookmark list (multi-line)   | Print it       |
+| `bm -bm add work`     | `Bookmark 'work' added: …`   | Print it       |
+| `bm --help`           | Help text (multi-line)       | Print it       |
+| `bm --version`        | `bmrk 0.1.0`                 | Print it       |
+| `bm` (TUI, press Esc) | _(empty)_                    | Do nothing     |
 
 ---
 

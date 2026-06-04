@@ -34,7 +34,7 @@ sysinfo = { version = "0.32", default-features = false, features = ["disk"] }
 time = ">=0.3.47"
 
 [[bin]]
-name = "bm"
+name = "bmrk"
 path = "src/main.rs"
 
 [dev-dependencies]

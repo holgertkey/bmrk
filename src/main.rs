@@ -20,7 +20,7 @@ use std::path::PathBuf;
 use terminal::{cleanup_terminal_compact, run_app, setup_terminal_compact};
 
 #[derive(Parser)]
-#[command(name = "bm")]
+#[command(name = "bmrk")]
 #[command(about = "Interactive bookmark manager and directory navigator")]
 #[command(disable_help_flag = true)]
 #[command(disable_version_flag = true)]
@@ -110,7 +110,7 @@ fn main() -> Result<()> {
     let args = Args::parse_from(args);
 
     if args.version {
-        println!("bm {}", env!("CARGO_PKG_VERSION"));
+        println!("bmrk {}", env!("CARGO_PKG_VERSION"));
         return Ok(());
     }
 
