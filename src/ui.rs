@@ -1,24 +1,18 @@
-// Allow many arguments for UI render functions - they need access to multiple UI components
+// Allow many arguments for UI render functions
 #![allow(clippy::too_many_arguments)]
 
 use crate::bookmarks::Bookmarks;
 use crate::config::Config;
-use crate::dir_size::{format_mtime, format_permissions, DirSizeCache};
 use crate::disks::Disks;
-use crate::file_icons;
-use crate::file_viewer::FileViewer;
 use crate::navigation::Navigation;
 use crate::search::Search;
-use crate::tree_node::TreeNodeRef;
 use ratatui::{
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
+    widgets::{List, ListItem, ListState, Paragraph},
     Frame,
 };
-use unicode_width::UnicodeWidthStr;
-
 fn truncate_name_middle(name: &str, max_len: usize) -> String {
     if max_len == 0 {
         return name.to_string();
@@ -42,26 +36,17 @@ fn truncate_name_middle(name: &str, max_len: usize) -> String {
     format!("{}...{}", first, last)
 }
 
-/// UI rendering module
+/// UI rendering state
 pub struct UI {
     pub tree_area_start: u16,
     pub tree_area_end: u16,
     pub tree_area_top: u16,
     pub tree_area_height: u16,
-    /// Absolute screen row of the FIRST tree item (accounts for block borders).
-    /// Normal mode: tree_area_top + 1 (top border).
-    /// Compact mode: tree_area_top (no borders).
+    /// Absolute screen row of the first tree item (no border in compact mode).
     pub tree_item_top: u16,
-    pub viewer_area_start: u16,
-    pub viewer_area_top: u16,
-    pub viewer_area_height: u16,
     pub terminal_width: u16,
     pub terminal_height: u16,
-    pub split_position: u16,
     pub tree_scroll_offset: usize,
-    // Bottom panel (search/bookmarks) properties
-    pub bottom_panel_split_position: u16, // Percentage from top (default 70)
-    pub bottom_panel_top: u16,
     pub bottom_panel_height: u16,
 }
 
@@ -79,370 +64,17 @@ impl UI {
             tree_area_top: 0,
             tree_area_height: 0,
             tree_item_top: 0,
-            viewer_area_start: 0,
-            viewer_area_top: 0,
-            viewer_area_height: 0,
             terminal_width: 0,
             terminal_height: 0,
-            split_position: 50,
             tree_scroll_offset: 0,
-            bottom_panel_split_position: 70,
-            bottom_panel_top: 0,
             bottom_panel_height: 0,
         }
     }
 
-    /// Adjust horizontal split position (20-80% range)
-    pub fn adjust_split(&mut self, position: u16) {
-        self.split_position = position.clamp(20, 80);
-    }
-
-    /// Adjust vertical split position for bottom panel (30-90% range)
-    pub fn adjust_bottom_split(&mut self, position: u16) {
-        self.bottom_panel_split_position = position.clamp(30, 90);
-    }
-
-    /// Main render function
-    pub fn render(
-        &mut self,
-        frame: &mut Frame,
-        nav: &Navigation,
-        file_viewer: &FileViewer,
-        search: &Search,
-        bookmarks: &Bookmarks,
-        disks: &Disks,
-        config: &Config,
-        show_files: bool,
-        show_help: bool,
-        fullscreen_viewer: bool,
-        show_sizes: bool,
-        dir_size_cache: &DirSizeCache,
-    ) {
-        self.terminal_width = frame.area().width;
-        self.terminal_height = frame.area().height;
-        let main_area = frame.area();
-
-        // If in fullscreen viewer mode, render only the file viewer
-        if fullscreen_viewer {
-            self.render_file_viewer(frame, main_area, file_viewer, false, config);
-            return;
-        }
-
-        // Reserve space for search bar if in search mode
-        let (content_area, search_bar_area) = if search.mode {
-            let chunks = Layout::default()
-                .direction(Direction::Vertical)
-                .constraints([Constraint::Min(3), Constraint::Length(3)])
-                .split(main_area);
-            (chunks[0], Some(chunks[1]))
-        } else {
-            (main_area, None)
-        };
-
-        // If showing search results, bookmarks, or disk panel, split vertically with dynamic position
-        let (tree_area, bottom_panel_area) = if search.show_results
-            || bookmarks.is_selecting
-            || bookmarks.is_creating
-            || disks.is_selecting
-        {
-            let chunks = Layout::default()
-                .direction(Direction::Vertical)
-                .constraints([
-                    Constraint::Percentage(self.bottom_panel_split_position),
-                    Constraint::Percentage(100 - self.bottom_panel_split_position),
-                ])
-                .split(content_area);
-
-            // Save bottom panel coordinates for mouse handling
-            self.bottom_panel_top = chunks[1].y;
-            self.bottom_panel_height = chunks[1].height;
-
-            (chunks[0], Some(chunks[1]))
-        } else {
-            // Reset bottom panel coordinates when not visible
-            self.bottom_panel_top = 0;
-            self.bottom_panel_height = 0;
-            (content_area, None)
-        };
-
-        // If file viewer mode enabled, split horizontally
-        if show_files {
-            let chunks = Layout::default()
-                .direction(Direction::Horizontal)
-                .constraints([
-                    Constraint::Percentage(self.split_position),
-                    Constraint::Percentage(100 - self.split_position),
-                ])
-                .split(tree_area);
-
-            self.tree_area_start = chunks[0].x;
-            self.tree_area_end = chunks[0].x + chunks[0].width;
-
-            self.render_tree(
-                frame,
-                chunks[0],
-                nav,
-                config,
-                show_sizes,
-                show_files,
-                dir_size_cache,
-            );
-            self.render_file_viewer(frame, chunks[1], file_viewer, show_help, config);
-        } else {
-            self.tree_area_start = tree_area.x;
-            self.tree_area_end = tree_area.x + tree_area.width;
-            self.render_tree(
-                frame,
-                tree_area,
-                nav,
-                config,
-                show_sizes,
-                show_files,
-                dir_size_cache,
-            );
-        }
-
-        // Render bottom panel — disk > bookmarks > search results
-        if let Some(area) = bottom_panel_area {
-            if disks.is_selecting {
-                self.render_disks_panel(frame, area, disks, config);
-            } else if bookmarks.is_selecting || bookmarks.is_creating {
-                self.render_bookmarks_panel(frame, area, bookmarks, config);
-            } else if search.show_results {
-                self.render_search_results(frame, area, search, &nav.root, config);
-            }
-        }
-
-        // Render search bar if in input mode
-        if let Some(area) = search_bar_area {
-            self.render_search_bar(frame, area, search, config);
-        }
-    }
-
-    fn render_tree(
-        &mut self,
-        frame: &mut Frame,
-        area: Rect,
-        nav: &Navigation,
-        config: &Config,
-        show_sizes: bool,
-        show_files: bool,
-        dir_size_cache: &DirSizeCache,
-    ) {
-        self.tree_area_top = area.y;
-        self.tree_area_height = area.height;
-        // In normal mode the tree is inside a Block; items start one row below the top border.
-        self.tree_item_top = area.y + 1;
-
-        // Pass 1: collect base text, size string and style for each node
-        let entry_data: Vec<(String, String, Style)> = nav
-            .flat_list
-            .iter()
-            .map(|node| {
-                let node_borrowed = node.borrow();
-                let indent = "  ".repeat(node_borrowed.depth);
-
-                let icon = if node_borrowed.has_error {
-                    "⚠ ".to_string()
-                } else if config.appearance.show_icons {
-                    let file_icon =
-                        file_icons::get_icon(&node_borrowed.path, node_borrowed.is_dir, true);
-                    if file_icon.trim().is_empty() {
-                        if node_borrowed.is_dir {
-                            if node_borrowed.is_expanded {
-                                "▼ ".to_string()
-                            } else {
-                                "▶ ".to_string()
-                            }
-                        } else {
-                            "  ".to_string()
-                        }
-                    } else {
-                        format!("{}  ", file_icon)
-                    }
-                } else if node_borrowed.is_dir {
-                    if node_borrowed.is_expanded {
-                        "▼ ".to_string()
-                    } else {
-                        "▶ ".to_string()
-                    }
-                } else {
-                    "  ".to_string()
-                };
-
-                let display_name =
-                    truncate_name_middle(&node_borrowed.name, config.appearance.max_name_length);
-                let base = format!("{}{}{}", indent, icon, display_name);
-
-                let size_str = if show_sizes {
-                    if node_borrowed.is_dir {
-                        if let Some(info) = dir_size_cache.get(&node_borrowed.path) {
-                            let size = DirSizeCache::format_size(info.size, info.is_partial);
-                            let counts = format!("{}f {}d", info.file_count, info.dir_count);
-                            format!(
-                                " [ {}, {}, {}, {} ]",
-                                size, counts, info.permissions, info.mtime
-                            )
-                        } else {
-                            let is_calc = dir_size_cache.is_calculating(&node_borrowed.path);
-                            match dir_size_cache.get_metadata(&node_borrowed.path) {
-                                Some((perms, mtime)) if is_calc => {
-                                    format!(" [ calc., {}, {} ]", perms, mtime)
-                                }
-                                Some((perms, mtime)) => {
-                                    // Cancelled — show metadata without size.
-                                    format!(" [ {}, {} ]", perms, mtime)
-                                }
-                                None if is_calc => " [ calc. ]".to_string(),
-                                None => String::new(),
-                            }
-                        }
-                    } else if show_files {
-                        if let Ok(meta) = std::fs::metadata(&node_borrowed.path) {
-                            let size = DirSizeCache::format_size(meta.len(), false);
-                            let perms = format_permissions(&meta);
-                            let mtime = format_mtime(&meta);
-                            format!(" [ {}, {}, {} ]", size, perms, mtime)
-                        } else {
-                            String::new()
-                        }
-                    } else {
-                        String::new()
-                    }
-                } else {
-                    String::new()
-                };
-
-                let style = if node_borrowed.has_error {
-                    let error_color = Config::parse_color(Config::get_color(
-                        &config.appearance.colors.error_color,
-                    ));
-                    Style::default().fg(error_color)
-                } else if node_borrowed.is_dir {
-                    let dir_color = Config::parse_color(Config::get_color(
-                        &config.appearance.colors.directory_color,
-                    ));
-                    Style::default().fg(dir_color)
-                } else {
-                    let file_color = Config::parse_color(Config::get_color(
-                        &config.appearance.colors.file_color,
-                    ));
-                    Style::default().fg(file_color)
-                };
-
-                (base, size_str, style)
-            })
-            .collect();
-
-        // Pass 2: find max base width so all size badges align in one column
-        let max_name_width = if show_sizes {
-            entry_data
-                .iter()
-                .map(|(base, _, _)| base.as_str().width())
-                .max()
-                .unwrap_or(0)
-        } else {
-            0
-        };
-
-        let items: Vec<ListItem> = entry_data
-            .into_iter()
-            .map(|(base, size_str, style)| {
-                let text = if !size_str.is_empty() {
-                    let padding = max_name_width.saturating_sub(base.as_str().width());
-                    format!("{}{}{}", base, " ".repeat(padding), size_str)
-                } else {
-                    base
-                };
-                ListItem::new(text).style(style)
-            })
-            .collect();
-
-        let mut state = ListState::default();
-        state.select(Some(nav.selected));
-
-        // Calculate scroll offset with margins from top and bottom
-        let visible_height = area.height.saturating_sub(2) as usize; // Account for borders
-        let total_items = nav.flat_list.len();
-        let lines_from_bottom = 5;
-        let lines_from_top = 7;
-
-        // Calculate max possible offset (when end of list is visible)
-        let max_offset = total_items.saturating_sub(visible_height);
-
-        let final_offset = if max_offset == 0 {
-            // List fits entirely in window - no scrolling needed
-            0
-        } else if nav.selected < lines_from_top {
-            // At the beginning: cursor moves freely until line 7
-            0
-        } else if nav.selected >= total_items.saturating_sub(lines_from_bottom) {
-            // At the end: show end of list, cursor moves freely
-            max_offset
-        } else {
-            // In the middle: keep cursor at line 7 from top (or 5 from bottom, whichever comes first)
-            let offset_from_top = nav.selected.saturating_sub(lines_from_top);
-            let offset_from_bottom = nav
-                .selected
-                .saturating_sub(visible_height.saturating_sub(lines_from_bottom));
-
-            // Use the smaller offset, but not more than max_offset
-            offset_from_top.max(offset_from_bottom).min(max_offset)
-        };
-
-        *state.offset_mut() = final_offset;
-        self.tree_scroll_offset = final_offset;
-
-        let title = if show_sizes {
-            " Directory Tree (↑↓/jk: navigate | Enter: go in | q: cd & exit | Esc: exit | z: hide sizes | /: search | i: help) "
-        } else {
-            " Directory Tree (↑↓/jk: navigate | Enter: go in | q: cd & exit | Esc: exit | z: show sizes | /: search | i: help) "
-        };
-
-        // Check tree cursor color settings - "dim" means no color/background, just dimming
-        let tree_cursor_color_str = Config::get_color(&config.appearance.colors.tree_cursor_color);
-        let tree_cursor_bg_color_str =
-            Config::get_color(&config.appearance.colors.tree_cursor_bg_color);
-
-        let mut highlight_style = if tree_cursor_color_str.to_lowercase() == "dim" {
-            Style::default().add_modifier(Modifier::DIM)
-        } else {
-            let tree_cursor_color = Config::parse_color(tree_cursor_color_str);
-            Style::default().fg(tree_cursor_color)
-        };
-
-        // Apply background color if not "dim"
-        if tree_cursor_bg_color_str.to_lowercase() != "dim" {
-            let tree_cursor_bg_color = Config::parse_color(tree_cursor_bg_color_str);
-            highlight_style = highlight_style.bg(tree_cursor_bg_color);
-        }
-
-        // Apply main border color and background color
-        let main_border_color = Config::parse_color(Config::get_color(
-            &config.appearance.colors.main_border_color,
-        ));
-        let background_color = Config::parse_color(Config::get_color(
-            &config.appearance.colors.background_color,
-        ));
-
-        let list = List::new(items)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title(title)
-                    .border_style(Style::default().fg(main_border_color))
-                    .style(Style::default().bg(background_color)),
-            )
-            .highlight_style(highlight_style)
-            .highlight_symbol(">> ");
-
-        frame.render_stateful_widget(list, area, &mut state);
-    }
-
     /// Render the compact inline viewport (COMPACT_HEIGHT rows, no alternate screen).
     /// Layout:
-    ///   Row 0   — header: root path + key hints (adapts to bookmark mode)
-    ///   Rows 1+ — tree items, or bookmark list when in bookmark mode
+    ///   Row 0   — header: root path + key hints (adapts to mode)
+    ///   Rows 1+ — tree items, or bookmark/search/disk list when active
     ///   Last row — search bar / bookmark input (only when active)
     pub fn render_compact(
         &mut self,
@@ -452,8 +84,6 @@ impl UI {
         bookmarks: &Bookmarks,
         disks: &Disks,
         config: &Config,
-        show_sizes: bool,
-        dir_size_cache: &DirSizeCache,
     ) {
         let area = frame.area();
         self.terminal_width = area.width;
@@ -470,8 +100,6 @@ impl UI {
                 .split(area);
             (chunks[0], Some(chunks[1]), None)
         } else if bookmarks.is_creating {
-            // Fix the input bar position based on TOTAL bookmark count (not visible
-            // after scroll), so it stays put while the user scrolls the list.
             let header_rows: u16 = 1;
             let input_rows: u16 = 1;
             let available = area.height.saturating_sub(header_rows + input_rows);
@@ -481,9 +109,9 @@ impl UI {
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([
-                    Constraint::Length(content_height), // header + list (fixed by total count)
-                    Constraint::Length(input_rows),     // input bar (fixed position)
-                    Constraint::Min(0),                 // remaining space below (empty)
+                    Constraint::Length(content_height),
+                    Constraint::Length(input_rows),
+                    Constraint::Min(0),
                 ])
                 .split(area);
             (chunks[0], None, Some(chunks[1]))
@@ -500,19 +128,18 @@ impl UI {
         let header_area = chunks[0];
         let body_area = chunks[1];
 
-        // Store body area geometry for mouse handling.
-        // In compact mode there are no borders, so items start at body_area.y directly.
+        // Store body area geometry for mouse handling
         self.tree_area_top = body_area.y;
         self.tree_area_height = body_area.height;
         self.tree_area_start = body_area.x;
         self.tree_area_end = body_area.x + body_area.width;
         self.tree_item_top = body_area.y;
 
-        // --- Header (adapts to bookmark mode) ---
+        // --- Header ---
         let root_path = nav.root.borrow().path.display().to_string();
 
         if disks.is_selecting {
-            let hints = "  ↑↓/jk:select  Enter:go  Esc:cancel";
+            let hints = "  jk:select  Enter:go  Esc:cancel";
             let label = if disks.disks.is_empty() {
                 "Disks (none found)".to_string()
             } else {
@@ -520,18 +147,16 @@ impl UI {
             };
             let max_label_len = (area.width as usize).saturating_sub(hints.len() + 4).max(8);
             let label_display = if label.len() > max_label_len {
-                format!("…{}", &label[label.len().saturating_sub(max_label_len)..])
+                format!("...{}", &label[label.len().saturating_sub(max_label_len)..])
             } else {
                 label
             };
             frame.render_widget(
                 Paragraph::new(Line::from(vec![
-                    Span::styled(" ▶ ", Style::default().fg(Color::Yellow)),
+                    Span::styled(" > ", Style::default().fg(Color::Yellow)),
                     Span::styled(
                         label_display,
-                        Style::default()
-                            .fg(Color::Cyan)
-                            .add_modifier(Modifier::BOLD),
+                        Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
                     ),
                     Span::styled(hints, Style::default().fg(Color::DarkGray)),
                 ])),
@@ -539,9 +164,9 @@ impl UI {
             );
         } else if bookmarks.is_selecting {
             let hints = if bookmarks.filter_mode {
-                "  ↑↓/jk:select  Enter:jump  Tab:nav  Esc:cancel"
+                "  jk:select  Enter:jump  Tab:nav  Esc:cancel"
             } else {
-                "  ↑↓/jk:select  Enter:jump  Tab:filter  dd:del  Esc:cancel"
+                "  jk:select  Enter:jump  Tab:filter  dd:del  Esc:cancel"
             };
             let filtered = bookmarks.get_filtered_bookmarks();
             let label = if bookmarks.filter_mode {
@@ -557,18 +182,16 @@ impl UI {
             };
             let max_label_len = (area.width as usize).saturating_sub(hints.len() + 4).max(8);
             let label_display = if label.len() > max_label_len {
-                format!("…{}", &label[label.len().saturating_sub(max_label_len)..])
+                format!("...{}", &label[label.len().saturating_sub(max_label_len)..])
             } else {
                 label
             };
             frame.render_widget(
                 Paragraph::new(Line::from(vec![
-                    Span::styled(" ▶ ", Style::default().fg(Color::Yellow)),
+                    Span::styled(" > ", Style::default().fg(Color::Yellow)),
                     Span::styled(
                         label_display,
-                        Style::default()
-                            .fg(Color::Cyan)
-                            .add_modifier(Modifier::BOLD),
+                        Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
                     ),
                     Span::styled(hints, Style::default().fg(Color::DarkGray)),
                 ])),
@@ -576,9 +199,9 @@ impl UI {
             );
         } else if search.show_results && search.focus_on_results {
             let hints = if search.is_searching {
-                "  ↑↓/jk:select  Enter:jump  Esc:cancel"
+                "  jk:select  Enter:jump  Esc:cancel"
             } else {
-                "  ↑↓/jk:select  Enter:jump  Esc:close"
+                "  jk:select  Enter:jump  Esc:close"
             };
             let label = if search.is_searching {
                 format!(
@@ -593,18 +216,16 @@ impl UI {
             };
             let max_label_len = (area.width as usize).saturating_sub(hints.len() + 4).max(8);
             let label_display = if label.len() > max_label_len {
-                format!("…{}", &label[label.len().saturating_sub(max_label_len)..])
+                format!("...{}", &label[label.len().saturating_sub(max_label_len)..])
             } else {
                 label
             };
             frame.render_widget(
                 Paragraph::new(Line::from(vec![
-                    Span::styled(" ◈ ", Style::default().fg(Color::Yellow)),
+                    Span::styled(" * ", Style::default().fg(Color::Yellow)),
                     Span::styled(
                         label_display,
-                        Style::default()
-                            .fg(Color::Cyan)
-                            .add_modifier(Modifier::BOLD),
+                        Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
                     ),
                     Span::styled(hints, Style::default().fg(Color::DarkGray)),
                 ])),
@@ -614,12 +235,12 @@ impl UI {
             let hints = if bookmarks.is_creating {
                 "  Enter:save  Ctrl+j/k:scroll  Esc:cancel"
             } else {
-                "  hjkl/↑↓:nav  u:parent  m:bookmark  ':jump  q:exit  Esc:cancel"
+                "  hjkl:nav  u:up  m:bmark  ':jump  d:disk  /: search  q:exit"
             };
             let max_path_len = (area.width as usize).saturating_sub(hints.len() + 4).max(8);
             let path_display = if root_path.len() > max_path_len {
                 format!(
-                    "…{}",
+                    "...{}",
                     &root_path[root_path.len().saturating_sub(max_path_len)..]
                 )
             } else {
@@ -627,12 +248,10 @@ impl UI {
             };
             frame.render_widget(
                 Paragraph::new(Line::from(vec![
-                    Span::styled(" ▼ ", Style::default().fg(Color::Green)),
+                    Span::styled(" v ", Style::default().fg(Color::Green)),
                     Span::styled(
                         path_display,
-                        Style::default()
-                            .fg(Color::Cyan)
-                            .add_modifier(Modifier::BOLD),
+                        Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
                     ),
                     Span::styled(hints, Style::default().fg(Color::DarkGray)),
                 ])),
@@ -640,7 +259,7 @@ impl UI {
             );
         }
 
-        // --- Body: disk list, bookmark list, bookmark creation preview, or tree ---
+        // --- Body ---
         if disks.is_selecting {
             let file_color =
                 Config::parse_color(Config::get_color(&config.appearance.colors.file_color));
@@ -758,7 +377,6 @@ impl UI {
                 );
             }
         } else if bookmarks.is_creating {
-            // Show existing bookmarks so user can see what names are taken
             let all_bookmarks = bookmarks.list();
             let file_color =
                 Config::parse_color(Config::get_color(&config.appearance.colors.file_color));
@@ -782,7 +400,7 @@ impl UI {
                 frame.render_widget(List::new(items), body_area);
             }
         } else if search.show_results && search.focus_on_results {
-            // --- Inline search results (no borders) ---
+            // Inline search results
             let dir_color =
                 Config::parse_color(Config::get_color(&config.appearance.colors.directory_color));
             let file_color =
@@ -886,78 +504,25 @@ impl UI {
                 );
             }
         } else {
-            // --- Normal tree items (no block/border) ---
+            // Normal tree items
             let dir_color =
                 Config::parse_color(Config::get_color(&config.appearance.colors.directory_color));
 
-            // Pass 1: collect base text, size string and is_dir flag for each node
-            let entry_data: Vec<(String, String, bool)> = nav
+            let items: Vec<ListItem> = nav
                 .flat_list
                 .iter()
                 .map(|node| {
                     let n = node.borrow();
                     let indent = "  ".repeat(n.depth);
                     let icon = if n.is_dir {
-                        if n.is_expanded {
-                            "▼ "
-                        } else {
-                            "▶ "
-                        }
+                        if n.is_expanded { "v " } else { "> " }
                     } else {
                         "  "
                     };
                     let display_name =
                         truncate_name_middle(&n.name, config.appearance.max_name_length);
-                    let base = format!("{}{}{}", indent, icon, display_name);
-                    let size_str = if show_sizes && n.is_dir {
-                        if let Some(info) = dir_size_cache.get(&n.path) {
-                            let size = DirSizeCache::format_size(info.size, info.is_partial);
-                            let counts = format!("{}f {}d", info.file_count, info.dir_count);
-                            format!(
-                                " [ {}, {}, {}, {} ]",
-                                size, counts, info.permissions, info.mtime
-                            )
-                        } else {
-                            let is_calc = dir_size_cache.is_calculating(&n.path);
-                            match dir_size_cache.get_metadata(&n.path) {
-                                Some((perms, mtime)) if is_calc => {
-                                    format!(" [ calc., {}, {} ]", perms, mtime)
-                                }
-                                Some((perms, mtime)) => {
-                                    format!(" [ {}, {} ]", perms, mtime)
-                                }
-                                None if is_calc => " [ calc. ]".to_string(),
-                                None => String::new(),
-                            }
-                        }
-                    } else {
-                        String::new()
-                    };
-                    (base, size_str, n.is_dir)
-                })
-                .collect();
-
-            // Pass 2: find max base width so all size badges align in one column
-            let max_name_width = if show_sizes {
-                entry_data
-                    .iter()
-                    .map(|(base, _, _)| base.as_str().width())
-                    .max()
-                    .unwrap_or(0)
-            } else {
-                0
-            };
-
-            let items: Vec<ListItem> = entry_data
-                .into_iter()
-                .map(|(base, size_str, is_dir)| {
-                    let text = if !size_str.is_empty() {
-                        let padding = max_name_width.saturating_sub(base.as_str().width());
-                        format!("{}{}{}", base, " ".repeat(padding), size_str)
-                    } else {
-                        base
-                    };
-                    let style = if is_dir {
+                    let text = format!("{}{}{}", indent, icon, display_name);
+                    let style = if n.is_dir {
                         Style::default().fg(dir_color)
                     } else {
                         Style::default()
@@ -969,7 +534,6 @@ impl UI {
             let mut state = ListState::default();
             state.select(Some(nav.selected));
 
-            // Keep selected item centred in the visible area
             let visible = body_area.height as usize;
             let total = nav.flat_list.len();
             let offset = if nav.selected < visible / 2 {
@@ -982,7 +546,6 @@ impl UI {
             *state.offset_mut() = offset;
             self.tree_scroll_offset = offset;
 
-            // Cursor highlight using theme colours
             let cursor_color_str = Config::get_color(&config.appearance.colors.tree_cursor_color);
             let cursor_bg_str = Config::get_color(&config.appearance.colors.tree_cursor_bg_color);
 
@@ -1004,7 +567,7 @@ impl UI {
             );
         }
 
-        // --- Compact search bar (single line, no block) ---
+        // Search bar (single line, no block)
         if let Some(bar_area) = search_bar_area {
             let mode_tag = if search.fuzzy_mode { "(fuzzy) " } else { "" };
             let bar_text = format!("/{}{}", mode_tag, search.query);
@@ -1014,9 +577,9 @@ impl UI {
             );
         }
 
-        // --- Compact bookmark input bar (single line, no block) ---
+        // Bookmark input bar (single line, no block)
         if let Some(input_area) = bookmark_input_area {
-            let input_text = format!(" Add bookmark: {}█", bookmarks.get_input());
+            let input_text = format!(" Add bookmark: {}|", bookmarks.get_input());
             frame.render_widget(
                 Paragraph::new(input_text).style(
                     Style::default()
@@ -1027,887 +590,10 @@ impl UI {
             );
         }
     }
-
-    fn render_search_bar(&self, frame: &mut Frame, area: Rect, search: &Search, config: &Config) {
-        let mode_indicator = if search.fuzzy_mode { " (fuzzy)" } else { "" };
-        let search_text = format!("Search{}: {}", mode_indicator, search.query);
-
-        let selected_color =
-            Config::parse_color(Config::get_color(&config.appearance.colors.selected_color));
-        let panel_border_color = Config::parse_color(Config::get_color(
-            &config.appearance.colors.panel_border_color,
-        ));
-
-        let title_hint = if search.fuzzy_mode {
-            " Enter to search | Esc: cancel | Fuzzy mode: /query "
-        } else {
-            " Enter to search | Esc: cancel | Fuzzy: /query "
-        };
-
-        let paragraph = Paragraph::new(search_text)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title(title_hint)
-                    .border_style(Style::default().fg(panel_border_color)),
-            )
-            .style(Style::default().fg(selected_color));
-
-        frame.render_widget(paragraph, area);
-    }
-
-    fn render_search_results(
-        &self,
-        frame: &mut Frame,
-        area: Rect,
-        search: &Search,
-        root: &TreeNodeRef,
-        config: &Config,
-    ) {
-        let root_path = root.borrow().path.clone();
-        let root_parent = root_path.parent().unwrap_or(&root_path);
-
-        let file_color =
-            Config::parse_color(Config::get_color(&config.appearance.colors.file_color));
-        let highlight_color =
-            Config::parse_color(Config::get_color(&config.appearance.colors.highlight_color));
-        let panel_border_color = Config::parse_color(Config::get_color(
-            &config.appearance.colors.panel_border_color,
-        ));
-
-        let dir_color =
-            Config::parse_color(Config::get_color(&config.appearance.colors.directory_color));
-
-        let items: Vec<ListItem> = search
-            .results
-            .iter()
-            .map(|result| {
-                let display_path = result
-                    .path
-                    .strip_prefix(root_parent)
-                    .unwrap_or(&result.path)
-                    .display()
-                    .to_string();
-
-                let base_color = if result.is_dir { dir_color } else { file_color };
-
-                // In fuzzy mode with match indices, highlight matching characters
-                if let (true, Some(indices)) = (search.fuzzy_mode, result.match_indices.as_ref()) {
-                    let mut spans = Vec::new();
-                    let chars: Vec<char> = display_path.chars().collect();
-                    let mut last_idx = 0;
-
-                    for &match_idx in indices {
-                        // Add text before the match
-                        if match_idx > last_idx {
-                            let text: String = chars[last_idx..match_idx].iter().collect();
-                            spans.push(Span::styled(text, Style::default().fg(base_color)));
-                        }
-
-                        // Add highlighted character
-                        if match_idx < chars.len() {
-                            let text: String = chars[match_idx..match_idx + 1].iter().collect();
-                            spans.push(Span::styled(
-                                text,
-                                Style::default()
-                                    .fg(highlight_color)
-                                    .add_modifier(Modifier::BOLD),
-                            ));
-                        }
-
-                        last_idx = match_idx + 1;
-                    }
-
-                    // Add remaining text after last match
-                    if last_idx < chars.len() {
-                        let text: String = chars[last_idx..].iter().collect();
-                        spans.push(Span::styled(text, Style::default().fg(base_color)));
-                    }
-
-                    // Add score at the end
-                    if let Some(score) = result.score {
-                        spans.push(Span::styled(
-                            format!(" [{}]", score),
-                            Style::default().fg(base_color),
-                        ));
-                    }
-
-                    ListItem::new(Line::from(spans))
-                } else {
-                    // Normal mode or no match indices - just display path with optional score
-                    let display_text =
-                        if let Some(score) = result.score.filter(|_| search.fuzzy_mode) {
-                            format!("{} [{}]", display_path, score)
-                        } else {
-                            display_path
-                        };
-
-                    ListItem::new(display_text).style(Style::default().fg(base_color))
-                }
-            })
-            .collect();
-
-        let mut state = ListState::default();
-        state.select(Some(search.selected));
-
-        // Show search status in title
-        let title = if search.is_searching {
-            format!(
-                " Search: {} found | Scanning... {} dirs | Esc: cancel ",
-                search.results.len(),
-                search.scanned_count
-            )
-        } else {
-            format!(
-                " Search Results: {} found | Enter: select | Tab: focus | Esc: close ",
-                search.results.len()
-            )
-        };
-
-        let border_style = Style::default().fg(panel_border_color);
-
-        // Check cursor color setting - "dim" means no color highlight, just dimming
-        let cursor_color_str = Config::get_color(&config.appearance.colors.cursor_color);
-        let cursor_highlight_style = if cursor_color_str.to_lowercase() == "dim" {
-            Style::default().add_modifier(Modifier::DIM)
-        } else {
-            let cursor_color = Config::parse_color(cursor_color_str);
-            Style::default()
-                .fg(cursor_color)
-                .add_modifier(Modifier::BOLD)
-        };
-
-        let list = List::new(items)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title(title)
-                    .border_style(border_style),
-            )
-            .highlight_style(cursor_highlight_style)
-            .highlight_symbol(">> ");
-
-        frame.render_stateful_widget(list, area, &mut state);
-    }
-
-    /// Helper method to load file with correct width for the viewer
-    pub fn load_file_for_viewer(
-        &self,
-        file_viewer: &mut FileViewer,
-        path: &std::path::Path,
-        max_lines: usize,
-        fullscreen: bool,
-        config: &Config,
-    ) -> anyhow::Result<()> {
-        let enable_highlighting = config.appearance.enable_syntax_highlighting;
-        let theme = &config.appearance.syntax_theme;
-
-        if fullscreen {
-            // For fullscreen, use terminal width (accounting for borders and line numbers)
-            // Line numbers take ~6 chars, borders take 2, leave some margin
-            let max_width = if file_viewer.show_line_numbers {
-                self.terminal_width.saturating_sub(8) as usize
-            } else {
-                self.terminal_width.saturating_sub(2) as usize
-            };
-            file_viewer.load_file_with_width(
-                path,
-                Some(max_width),
-                max_lines,
-                enable_highlighting,
-                theme,
-            )
-        } else {
-            // For split view, calculate available width based on split position
-            let max_width = self
-                .terminal_width
-                .saturating_sub(self.split_position * self.terminal_width / 100)
-                .saturating_sub(4) as usize;
-            file_viewer.load_file_with_width(
-                path,
-                Some(max_width),
-                max_lines,
-                enable_highlighting,
-                theme,
-            )
-        }
-    }
-
-    fn render_file_viewer(
-        &mut self,
-        frame: &mut Frame,
-        area: Rect,
-        file_viewer: &FileViewer,
-        show_help: bool,
-        config: &Config,
-    ) {
-        // Check if we're in fullscreen mode (area == frame.area())
-        let is_fullscreen = area == frame.area();
-
-        // Reserve space for search bar if in fullscreen search mode
-        let (viewer_area, search_bar_area) = if is_fullscreen && file_viewer.search_mode {
-            let chunks = Layout::default()
-                .direction(Direction::Vertical)
-                .constraints([Constraint::Min(3), Constraint::Length(3)])
-                .split(area);
-            (chunks[0], Some(chunks[1]))
-        } else {
-            (area, None)
-        };
-
-        self.viewer_area_start = viewer_area.x;
-        self.viewer_area_top = viewer_area.y;
-        self.viewer_area_height = viewer_area.height;
-
-        // Apply main border color and background color
-        let main_border_color = Config::parse_color(Config::get_color(
-            &config.appearance.colors.main_border_color,
-        ));
-        let background_color = Config::parse_color(Config::get_color(
-            &config.appearance.colors.background_color,
-        ));
-
-        let content_height = viewer_area.height.saturating_sub(2) as usize;
-
-        // Avoid cloning entire content - use references instead
-        let help_content;
-        let content_to_display: &[String] = if show_help {
-            help_content = get_help_content();
-            &help_content
-        } else {
-            &file_viewer.content
-        };
-
-        // Calculate visible lines (leaving space for separator and file info)
-        let lines_to_show = content_height.saturating_sub(2);
-
-        let show_numbers = is_fullscreen && file_viewer.show_line_numbers && !show_help;
-
-        // Get highlight color for file search matches
-        let file_search_highlight_color = Config::parse_color(Config::get_color(
-            &config.appearance.colors.file_search_highlight_color,
-        ));
-
-        // Use highlighted content if available, otherwise fall back to plain text
-        let use_highlighting = !file_viewer.highlighted_content.is_empty() && !show_help;
-
-        let mut visible_lines: Vec<Line> = if use_highlighting {
-            // Use pre-highlighted content
-            file_viewer
-                .highlighted_content
-                .iter()
-                .enumerate()
-                .skip(file_viewer.scroll)
-                .take(lines_to_show)
-                .map(|(idx, line)| {
-                    // idx already contains scroll offset after enumerate().skip()
-                    let line_idx = idx; // 0-indexed absolute position in content
-                    let line_num = line_idx + 1; // 1-indexed for display
-                    let is_match = file_viewer.line_has_match(line_idx);
-                    let is_current = file_viewer.is_current_match(line_idx);
-                    let is_selected = file_viewer.is_line_selected(line_idx);
-                    let is_visual_cursor =
-                        file_viewer.visual_mode && file_viewer.visual_cursor == line_idx;
-
-                    let mut spans = Vec::new();
-
-                    // Add line numbers if enabled
-                    if show_numbers {
-                        let border_color = Config::parse_color(Config::get_color(
-                            &config.appearance.colors.border_color,
-                        ));
-                        let num_style = if is_visual_cursor {
-                            Style::default()
-                                .fg(Color::White)
-                                .bg(Color::Blue)
-                                .add_modifier(Modifier::BOLD)
-                        } else if is_selected {
-                            Style::default().fg(Color::White).bg(Color::DarkGray)
-                        } else if is_current {
-                            Style::default()
-                                .fg(file_search_highlight_color)
-                                .add_modifier(Modifier::BOLD)
-                        } else if is_match {
-                            Style::default().fg(file_search_highlight_color)
-                        } else {
-                            Style::default().fg(border_color)
-                        };
-                        spans.push(Span::styled(format!("{:4} ", line_num), num_style));
-                    }
-
-                    // Add line content with search query highlighting
-                    if is_match && !file_viewer.search_query.is_empty() {
-                        // Highlight only the search query within the line
-                        let query_lower = file_viewer.search_query.to_lowercase();
-
-                        for span in &line.spans {
-                            let text = &span.content;
-                            let text_lower = text.to_lowercase();
-
-                            if let Some(match_pos) = text_lower.find(&query_lower) {
-                                // Split text into: before | match | after
-                                let before = &text[..match_pos];
-                                let matched =
-                                    &text[match_pos..match_pos + file_viewer.search_query.len()];
-                                let after = &text[match_pos + file_viewer.search_query.len()..];
-
-                                // Apply visual selection style if needed
-                                let base_style = if is_visual_cursor {
-                                    span.style.bg(Color::Blue)
-                                } else if is_selected {
-                                    span.style.bg(Color::DarkGray)
-                                } else {
-                                    span.style
-                                };
-
-                                // Before match
-                                if !before.is_empty() {
-                                    spans.push(Span::styled(before.to_string(), base_style));
-                                }
-
-                                // Matched text
-                                let match_style = if is_current {
-                                    base_style.add_modifier(Modifier::REVERSED | Modifier::BOLD)
-                                } else {
-                                    base_style
-                                        .bg(file_search_highlight_color)
-                                        .add_modifier(Modifier::BOLD)
-                                };
-                                spans.push(Span::styled(matched.to_string(), match_style));
-
-                                // After match
-                                if !after.is_empty() {
-                                    spans.push(Span::styled(after.to_string(), base_style));
-                                }
-                            } else {
-                                // No match in this span, use original style with visual selection
-                                let base_style = if is_visual_cursor {
-                                    span.style.bg(Color::Blue)
-                                } else if is_selected {
-                                    span.style.bg(Color::DarkGray)
-                                } else {
-                                    span.style
-                                };
-                                spans.push(Span::styled(span.content.clone(), base_style));
-                            }
-                        }
-                    } else {
-                        // No match or no query - use original styling with visual selection
-                        for span in &line.spans {
-                            let base_style = if is_visual_cursor {
-                                span.style.bg(Color::Blue)
-                            } else if is_selected {
-                                span.style.bg(Color::DarkGray)
-                            } else {
-                                span.style
-                            };
-                            spans.push(Span::styled(span.content.clone(), base_style));
-                        }
-                    }
-
-                    Line::from(spans)
-                })
-                .collect()
-        } else {
-            // Fallback to plain text
-            content_to_display
-                .iter()
-                .enumerate()
-                .skip(file_viewer.scroll)
-                .take(lines_to_show)
-                .map(|(idx, line)| {
-                    // idx already contains scroll offset after enumerate().skip()
-                    let line_idx = idx; // 0-indexed absolute position in content
-                    let line_num = line_idx + 1; // 1-indexed for display
-                    let is_match = file_viewer.line_has_match(line_idx);
-                    let is_current = file_viewer.is_current_match(line_idx);
-                    let is_selected = file_viewer.is_line_selected(line_idx);
-                    let is_visual_cursor =
-                        file_viewer.visual_mode && file_viewer.visual_cursor == line_idx;
-
-                    let mut spans = Vec::new();
-
-                    // Add line numbers if enabled
-                    if show_numbers {
-                        let border_color = Config::parse_color(Config::get_color(
-                            &config.appearance.colors.border_color,
-                        ));
-                        let num_style = if is_visual_cursor {
-                            Style::default()
-                                .fg(Color::White)
-                                .bg(Color::Blue)
-                                .add_modifier(Modifier::BOLD)
-                        } else if is_selected {
-                            Style::default().fg(Color::White).bg(Color::DarkGray)
-                        } else if is_current {
-                            Style::default()
-                                .fg(file_search_highlight_color)
-                                .add_modifier(Modifier::BOLD)
-                        } else if is_match {
-                            Style::default().fg(file_search_highlight_color)
-                        } else {
-                            Style::default().fg(border_color)
-                        };
-                        spans.push(Span::styled(format!("{:4} ", line_num), num_style));
-                    }
-
-                    // Determine base style for visual selection
-                    let base_style = if is_visual_cursor {
-                        Style::default().bg(Color::Blue)
-                    } else if is_selected {
-                        Style::default().bg(Color::DarkGray)
-                    } else {
-                        Style::default()
-                    };
-
-                    // Add line content with search query highlighting
-                    if is_match && !file_viewer.search_query.is_empty() {
-                        // Highlight only the search query within the line
-                        let text = line.as_str();
-                        let text_lower = text.to_lowercase();
-                        let query_lower = file_viewer.search_query.to_lowercase();
-
-                        if let Some(match_pos) = text_lower.find(&query_lower) {
-                            // Split text into: before | match | after
-                            let before = &text[..match_pos];
-                            let matched =
-                                &text[match_pos..match_pos + file_viewer.search_query.len()];
-                            let after = &text[match_pos + file_viewer.search_query.len()..];
-
-                            // Before match
-                            if !before.is_empty() {
-                                spans.push(Span::styled(before.to_string(), base_style));
-                            }
-
-                            // Matched text
-                            let match_style = if is_current {
-                                base_style.add_modifier(Modifier::REVERSED | Modifier::BOLD)
-                            } else {
-                                base_style
-                                    .bg(file_search_highlight_color)
-                                    .add_modifier(Modifier::BOLD)
-                            };
-                            spans.push(Span::styled(matched.to_string(), match_style));
-
-                            // After match
-                            if !after.is_empty() {
-                                spans.push(Span::styled(after.to_string(), base_style));
-                            }
-                        } else {
-                            // Shouldn't happen, but fallback to normal
-                            spans.push(Span::styled(line.as_str(), base_style));
-                        }
-                    } else {
-                        // No match or no query - normal text with visual selection style
-                        spans.push(Span::styled(line.as_str(), base_style));
-                    }
-
-                    Line::from(spans)
-                })
-                .collect()
-        };
-
-        // Add separator and file info at the end (only if not help)
-        if !show_help && !file_viewer.current_path.as_os_str().is_empty() {
-            let file_info = file_viewer.format_file_info();
-
-            // In fullscreen mode, there are no left/right borders, so use full width
-            // In split view, subtract 2 for left/right borders
-            let footer_width = if is_fullscreen {
-                area.width as usize
-            } else {
-                area.width.saturating_sub(2) as usize
-            };
-
-            let separator = "─".repeat(footer_width);
-
-            // Pad file_info to match separator width
-            let file_info_padded = if file_info.len() < footer_width {
-                format!("{:<width$}", file_info, width = footer_width)
-            } else {
-                file_info
-            };
-
-            let border_color =
-                Config::parse_color(Config::get_color(&config.appearance.colors.border_color));
-
-            visible_lines.push(Line::from(Span::styled(
-                separator,
-                Style::default().fg(border_color),
-            )));
-            visible_lines.push(Line::from(Span::styled(
-                file_info_padded,
-                Style::default().fg(border_color),
-            )));
-        }
-
-        let scroll_info = if content_to_display.len() > lines_to_show {
-            format!(
-                " [↕ {}/{}]",
-                file_viewer.scroll + 1,
-                content_to_display.len()
-            )
-        } else {
-            String::new()
-        };
-
-        let title = if show_help {
-            format!(" Help{} ", scroll_info)
-        } else if is_fullscreen {
-            // Fullscreen mode - simplified title
-            let mode_indicator = if file_viewer.visual_mode {
-                " [VISUAL MODE]"
-            } else if file_viewer.tail_mode {
-                " [TAIL MODE]"
-            } else if file_viewer.total_lines.is_some()
-                && file_viewer.total_lines.unwrap() > file_viewer.content.len()
-            {
-                " [HEAD MODE]"
-            } else {
-                ""
-            };
-
-            // Add search match info if there are results or in search mode
-            let search_info = if !file_viewer.search_results.is_empty() {
-                format!(" | {} | n/N: next/prev ", file_viewer.get_match_info())
-            } else if file_viewer.search_mode && !file_viewer.search_query.is_empty() {
-                " | No matches ".to_string()
-            } else {
-                String::new()
-            };
-
-            // Add hints for toggles (hide in visual mode)
-            let hints = if file_viewer.visual_mode {
-                " - j/k: select | y: copy | Esc: cancel"
-            } else {
-                let line_numbers_hint = if file_viewer.show_line_numbers {
-                    " | l: hide lines"
-                } else {
-                    " | l: show lines"
-                };
-
-                let wrap_hint = if file_viewer.wrap_lines {
-                    " | w: truncate"
-                } else {
-                    " | w: wrap"
-                };
-
-                &format!(" - V: visual | /: search | j/k: scroll | Ctrl+j/k: next/prev file{}{} | q: back | Esc: exit", line_numbers_hint, wrap_hint)
-            };
-
-            format!(
-                " File Viewer (Fullscreen{}{}){}{}",
-                mode_indicator, hints, search_info, scroll_info
-            )
-        } else {
-            format!(" File Viewer{} ", scroll_info)
-        };
-
-        // In fullscreen mode, only show top and bottom borders (no sides)
-        let borders = if is_fullscreen {
-            Borders::TOP | Borders::BOTTOM
-        } else {
-            Borders::ALL
-        };
-
-        let paragraph = Paragraph::new(visible_lines).block(
-            Block::default()
-                .borders(borders)
-                .title(title)
-                .border_style(Style::default().fg(main_border_color))
-                .style(Style::default().bg(background_color)),
-        );
-
-        frame.render_widget(paragraph, viewer_area);
-
-        // Render file search bar if in search mode
-        if let Some(search_area) = search_bar_area {
-            self.render_file_search_bar(frame, search_area, file_viewer, config);
-        }
-    }
-
-    fn render_file_search_bar(
-        &self,
-        frame: &mut Frame,
-        area: Rect,
-        file_viewer: &FileViewer,
-        config: &Config,
-    ) {
-        let search_text = format!("Search: {}█", file_viewer.search_query);
-
-        let selected_color =
-            Config::parse_color(Config::get_color(&config.appearance.colors.selected_color));
-        let panel_border_color = Config::parse_color(Config::get_color(
-            &config.appearance.colors.panel_border_color,
-        ));
-
-        let title_hint = " Enter to search | n: next | N: prev | Esc: cancel ";
-
-        let paragraph = Paragraph::new(search_text)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title(title_hint)
-                    .border_style(Style::default().fg(panel_border_color)),
-            )
-            .style(Style::default().fg(selected_color));
-
-        frame.render_widget(paragraph, area);
-    }
-
-    fn render_bookmarks_panel(
-        &self,
-        frame: &mut Frame,
-        area: Rect,
-        bookmarks: &Bookmarks,
-        config: &Config,
-    ) {
-        let border_color =
-            Config::parse_color(Config::get_color(&config.appearance.colors.border_color));
-        let selected_color =
-            Config::parse_color(Config::get_color(&config.appearance.colors.selected_color));
-        let file_color =
-            Config::parse_color(Config::get_color(&config.appearance.colors.file_color));
-        let panel_border_color = Config::parse_color(Config::get_color(
-            &config.appearance.colors.panel_border_color,
-        ));
-
-        if bookmarks.is_creating {
-            // Creation mode - bookmark list + input bar
-            // Split area: top for list, bottom for input (3 lines)
-            let chunks = Layout::default()
-                .direction(Direction::Vertical)
-                .constraints([Constraint::Min(3), Constraint::Length(3)])
-                .split(area);
-
-            let list_area = chunks[0];
-            let input_area = chunks[1];
-
-            // Render bookmark list first
-            let all_bookmarks = bookmarks.list();
-            if !all_bookmarks.is_empty() {
-                let items: Vec<ListItem> = all_bookmarks
-                    .iter()
-                    .skip(bookmarks.scroll_offset)
-                    .map(|bookmark| {
-                        let name = bookmark.name.as_deref().unwrap_or("(unnamed)");
-                        let path_str = bookmark.path.display().to_string();
-
-                        let text = format!("{:<12} → {:<20} ({})", bookmark.key, name, path_str);
-                        ListItem::new(text).style(Style::default().fg(file_color))
-                    })
-                    .collect();
-
-                let count_text = if !all_bookmarks.is_empty() {
-                    format!(" Existing Bookmarks ({}) ", all_bookmarks.len())
-                } else {
-                    " Existing Bookmarks ".to_string()
-                };
-
-                let list = List::new(items).block(
-                    Block::default()
-                        .borders(Borders::ALL)
-                        .title(count_text)
-                        .border_style(Style::default().fg(panel_border_color)),
-                );
-
-                frame.render_widget(list, list_area);
-            }
-
-            // Render input bar at the bottom
-            let input_text = format!("Bookmark name: {}█", bookmarks.get_input());
-            let title = " Create Bookmark (Enter: save | Esc: cancel | Ctrl+j/k/↑↓: scroll list) ";
-
-            let paragraph = Paragraph::new(input_text)
-                .block(
-                    Block::default()
-                        .borders(Borders::ALL)
-                        .title(title)
-                        .border_style(Style::default().fg(panel_border_color)),
-                )
-                .style(
-                    Style::default()
-                        .fg(selected_color)
-                        .add_modifier(Modifier::BOLD),
-                );
-
-            frame.render_widget(paragraph, input_area);
-        } else {
-            // Selection mode - list with navigation
-            let filtered = bookmarks.get_filtered_bookmarks();
-
-            if filtered.is_empty() {
-                // No bookmarks - show message
-                let title = " Bookmarks (Press 'm' to create | Esc: close) ";
-                let message = if bookmarks.filter_mode {
-                    format!("No bookmarks match filter: '{}'", bookmarks.get_input())
-                } else {
-                    "No bookmarks saved yet".to_string()
-                };
-
-                let paragraph = Paragraph::new(message)
-                    .block(
-                        Block::default()
-                            .borders(Borders::ALL)
-                            .title(title)
-                            .border_style(Style::default().fg(border_color)),
-                    )
-                    .style(Style::default().fg(border_color));
-
-                frame.render_widget(paragraph, area);
-            } else {
-                // Has bookmarks - show list with navigation
-                let error_color =
-                    Config::parse_color(Config::get_color(&config.appearance.colors.error_color));
-                let items: Vec<ListItem> = filtered
-                    .iter()
-                    .enumerate()
-                    .map(|(idx, bookmark)| {
-                        let name = bookmark.name.as_deref().unwrap_or("(unnamed)");
-                        let path_str = bookmark.path.display().to_string();
-
-                        // Check if this bookmark is marked for deletion
-                        let is_marked = bookmarks.pending_deletion_index == Some(idx);
-                        let prefix = if is_marked { "[DEL] " } else { "" };
-                        let text = format!(
-                            "{}{:<12} → {:<20} ({})",
-                            prefix, bookmark.key, name, path_str
-                        );
-
-                        // Use error color for marked bookmarks
-                        let style = if is_marked {
-                            Style::default().fg(error_color)
-                        } else {
-                            Style::default().fg(file_color)
-                        };
-
-                        ListItem::new(text).style(style)
-                    })
-                    .collect();
-
-                let mut state = ListState::default();
-                state.select(Some(bookmarks.selected_index));
-
-                let mode_hint = if bookmarks.filter_mode {
-                    format!("Filter: {}", bookmarks.get_input())
-                } else {
-                    format!("{}/{}", bookmarks.selected_index + 1, filtered.len())
-                };
-
-                let deletion_hint = if bookmarks.is_marked_for_deletion() {
-                    " | d: confirm delete"
-                } else {
-                    " | d: delete"
-                };
-
-                let hint = if bookmarks.filter_mode {
-                    format!(" {} | Tab: nav | Enter: select | Esc: cancel ", mode_hint)
-                } else {
-                    format!(" Bookmarks: {} | ↑↓/jk: move{} | Tab: filter | Enter: select | Esc: cancel ", mode_hint, deletion_hint)
-                };
-
-                // Check cursor color setting - "dim" means no color highlight, just dimming
-                let cursor_color_str = Config::get_color(&config.appearance.colors.cursor_color);
-                let cursor_highlight_style = if cursor_color_str.to_lowercase() == "dim" {
-                    Style::default().add_modifier(Modifier::DIM)
-                } else {
-                    let cursor_color = Config::parse_color(cursor_color_str);
-                    Style::default()
-                        .fg(cursor_color)
-                        .add_modifier(Modifier::BOLD)
-                };
-
-                let list = List::new(items)
-                    .block(
-                        Block::default()
-                            .borders(Borders::ALL)
-                            .title(hint)
-                            .border_style(Style::default().fg(panel_border_color)),
-                    )
-                    .highlight_style(cursor_highlight_style)
-                    .highlight_symbol(">> ");
-
-                frame.render_stateful_widget(list, area, &mut state);
-            }
-        }
-    }
-
-    fn render_disks_panel(&self, frame: &mut Frame, area: Rect, disks: &Disks, config: &Config) {
-        let file_color =
-            Config::parse_color(Config::get_color(&config.appearance.colors.file_color));
-        let panel_border_color = Config::parse_color(Config::get_color(
-            &config.appearance.colors.panel_border_color,
-        ));
-        let cursor_color_str = Config::get_color(&config.appearance.colors.cursor_color);
-        let cursor_highlight_style = if cursor_color_str.to_lowercase() == "dim" {
-            Style::default().add_modifier(Modifier::DIM)
-        } else {
-            Style::default()
-                .fg(Config::parse_color(cursor_color_str))
-                .add_modifier(Modifier::BOLD)
-        };
-
-        if disks.disks.is_empty() {
-            let para = Paragraph::new("No disks found.").block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title(" Disks (↑↓/jk: move | Enter: go | Esc: cancel) ")
-                    .border_style(Style::default().fg(panel_border_color)),
-            );
-            frame.render_widget(para, area);
-            return;
-        }
-
-        let items: Vec<ListItem> = disks
-            .disks
-            .iter()
-            .map(|d| ListItem::new(d.display_line()).style(Style::default().fg(file_color)))
-            .collect();
-
-        let mut state = ListState::default();
-        state.select(Some(disks.selected_index));
-
-        let visible = area.height.saturating_sub(2) as usize; // subtract borders
-        let total = disks.disks.len();
-        let offset = if disks.selected_index < visible / 2 {
-            0
-        } else if disks.selected_index >= total.saturating_sub(visible / 2) {
-            total.saturating_sub(visible)
-        } else {
-            disks.selected_index.saturating_sub(visible / 2)
-        };
-        *state.offset_mut() = offset;
-
-        let title = format!(
-            " Disks ({}/{}) | ↑↓/jk: move | Enter: go | Esc: cancel ",
-            disks.selected_index + 1,
-            total
-        );
-
-        let list = List::new(items)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title(title)
-                    .border_style(Style::default().fg(panel_border_color)),
-            )
-            .highlight_style(cursor_highlight_style)
-            .highlight_symbol(">> ");
-
-        frame.render_stateful_widget(list, area, &mut state);
-    }
 }
 
-/// Load help content from HELP.txt file (embedded at compile time)
+/// Load help content from HELP.txt (embedded at compile time)
 pub fn get_help_content() -> Vec<String> {
-    // Embed platform-specific help file at compile time using include_str!
-    // This is more reliable than runtime file I/O
-    #[cfg(unix)]
-    const HELP_TEXT: &str = include_str!("../HELP_UNIX.txt");
-
-    #[cfg(windows)]
-    const HELP_TEXT: &str = include_str!("../HELP_WINDOWS.txt");
-
-    // Split by lines and convert to Vec<String>
+    const HELP_TEXT: &str = include_str!("../HELP.txt");
     HELP_TEXT.lines().map(|line| line.to_string()).collect()
 }

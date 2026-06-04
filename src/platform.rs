@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::process::Command;
 
 /// Open an external program with the given path
-/// This function handles platform differences in launching external programs
+#[allow(dead_code)]
 #[cfg(unix)]
 pub fn open_external_program(program: &str, path: &str) -> Result<()> {
     // Unix: use sh shell with proper TTY handling
@@ -18,6 +18,7 @@ pub fn open_external_program(program: &str, path: &str) -> Result<()> {
     Ok(())
 }
 
+#[allow(dead_code)]
 #[cfg(windows)]
 pub fn open_external_program(program: &str, path: &str) -> Result<()> {
     // On Windows, use cmd /C to handle .exe, .cmd, .bat files

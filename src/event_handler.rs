@@ -1,28 +1,21 @@
-// Allow many arguments for event handler functions - they need direct access to app state
+// Allow many arguments for event handler functions
 #![allow(clippy::too_many_arguments)]
 
 use anyhow::Result;
-use arboard::Clipboard;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use crate::bookmarks::Bookmarks;
 use crate::config::Config;
-use crate::dir_size::DirSizeCache;
 use crate::disks::Disks;
-use crate::file_viewer::FileViewer;
 use crate::navigation::Navigation;
 use crate::search::Search;
 use crate::ui::UI;
 
 /// Event handler for keyboard and mouse input
 pub struct EventHandler {
-    pub dragging: bool,
-    pub dragging_vertical: bool, // For bottom panel resize
     pub last_click_time: Option<(Instant, usize)>,
-    pub last_bookmark_click_time: Option<(Instant, usize)>, // For bookmark double-click
-    pub last_search_click_time: Option<(Instant, usize)>,   // For search results double-click
 }
 
 impl Default for EventHandler {
@@ -34,11 +27,7 @@ impl Default for EventHandler {
 impl EventHandler {
     pub fn new() -> Self {
         Self {
-            dragging: false,
-            dragging_vertical: false,
             last_click_time: None,
-            last_bookmark_click_time: None,
-            last_search_click_time: None,
         }
     }
 
@@ -47,23 +36,15 @@ impl EventHandler {
         &mut self,
         key: KeyEvent,
         nav: &mut Navigation,
-        file_viewer: &mut FileViewer,
         search: &mut Search,
         bookmarks: &mut Bookmarks,
         disks: &mut Disks,
-        show_files: &mut bool,
-        show_files_before_help: &mut bool,
-        show_help: &mut bool,
-        fullscreen_viewer: &mut bool,
-        show_sizes: &mut bool,
-        dir_size_cache: &mut DirSizeCache,
-        need_terminal_clear: &mut bool,
         ui: &UI,
         config: &Config,
     ) -> Result<Option<PathBuf>> {
-        // Search mode - separate handling
+        // Search input mode
         if search.mode {
-            return self.handle_search_input(key, search, nav, *show_files);
+            return self.handle_search_input(key, search, nav);
         }
 
         // Disk selection mode
@@ -77,26 +58,7 @@ impl EventHandler {
                     if let Some(disk) = disks.get_selected() {
                         let path = disk.mount_point.clone();
                         disks.exit_selection_mode();
-                        if let Ok(Some(error_msg)) = nav.go_to_directory(path, *show_files) {
-                            if *show_files {
-                                file_viewer.load_content(vec![
-                                    "Error accessing disk".to_string(),
-                                    String::new(),
-                                    error_msg,
-                                ]);
-                                *show_help = false;
-                            }
-                        } else if *show_files {
-                            if let Some(node) = nav.get_selected_node() {
-                                let _ = ui.load_file_for_viewer(
-                                    file_viewer,
-                                    &node.borrow().path,
-                                    config.behavior.max_file_lines,
-                                    false,
-                                    config,
-                                );
-                            }
-                        }
+                        let _ = nav.go_to_directory(path, false);
                     } else {
                         disks.exit_selection_mode();
                     }
@@ -114,7 +76,7 @@ impl EventHandler {
             }
         }
 
-        // Bookmark selection mode (navigation + filter)
+        // Bookmark selection mode
         if bookmarks.is_selecting {
             match key.code {
                 KeyCode::Esc => {
@@ -122,104 +84,48 @@ impl EventHandler {
                     return Ok(Some(PathBuf::new()));
                 }
                 KeyCode::Tab => {
-                    // Toggle between navigation and filter mode
                     bookmarks.toggle_filter_mode();
                     return Ok(Some(PathBuf::new()));
                 }
                 KeyCode::Enter => {
-                    // Select currently highlighted bookmark (not by name)
                     if let Some(bookmark) = bookmarks.get_selected_bookmark() {
                         let path = bookmark.path.clone();
-                        let bookmark_key = bookmark.key.clone();
-                        let dir_name = bookmark
-                            .name
-                            .clone()
-                            .unwrap_or_else(|| bookmark_key.clone());
                         bookmarks.exit_selection_mode();
-
-                        // Try to navigate and check for errors
-                        if let Ok(Some(error_msg)) = nav.go_to_directory(path, *show_files) {
-                            // Error occurred - show details in file viewer if show_files is enabled
-                            if *show_files {
-                                let error_content = vec![
-                                    format!(
-                                        "Error accessing bookmark '{}' ({})",
-                                        bookmark_key, dir_name
-                                    ),
-                                    String::new(),
-                                    error_msg,
-                                    String::new(),
-                                    "This directory cannot be accessed. Possible reasons:"
-                                        .to_string(),
-                                    "- Insufficient permissions".to_string(),
-                                    "- Directory was removed or renamed".to_string(),
-                                    "- Filesystem error".to_string(),
-                                ];
-                                file_viewer.load_content(error_content);
-                                *show_help = false;
-                            }
-                        } else {
-                            // Success - load file preview if needed
-                            if *show_files {
-                                if let Some(node) = nav.get_selected_node() {
-                                    let _ = ui.load_file_for_viewer(
-                                        file_viewer,
-                                        &node.borrow().path,
-                                        config.behavior.max_file_lines,
-                                        false,
-                                        config,
-                                    );
-                                }
-                            }
-                        }
+                        let _ = nav.go_to_directory(path, false);
                     } else {
-                        // No bookmark selected (empty list) - just exit
                         bookmarks.exit_selection_mode();
                     }
                     return Ok(Some(PathBuf::new()));
                 }
                 KeyCode::Char('j') | KeyCode::Down if !bookmarks.filter_mode => {
-                    // Navigation mode - move down
                     bookmarks.move_down();
                     return Ok(Some(PathBuf::new()));
                 }
                 KeyCode::Char('k') | KeyCode::Up if !bookmarks.filter_mode => {
-                    // Navigation mode - move up
                     bookmarks.move_up();
                     return Ok(Some(PathBuf::new()));
                 }
                 KeyCode::Char('d') if !bookmarks.filter_mode => {
-                    // Delete bookmark - first press marks, second press confirms
                     let _ = bookmarks.handle_deletion_key();
                     return Ok(Some(PathBuf::new()));
                 }
                 KeyCode::Char(c) if bookmarks.filter_mode => {
-                    // Filter mode - add character and update filter
                     bookmarks.add_char(c);
                     return Ok(Some(PathBuf::new()));
                 }
                 KeyCode::Backspace if bookmarks.filter_mode => {
-                    // Filter mode - remove character and update filter
                     bookmarks.backspace();
                     return Ok(Some(PathBuf::new()));
                 }
-                _ => {
-                    return Ok(Some(PathBuf::new()));
-                }
+                _ => return Ok(Some(PathBuf::new())),
             }
         }
 
-        // Bookmark creation mode (text input for bookmark name)
+        // Bookmark creation mode
         if bookmarks.is_creating {
-            // Handle Ctrl+j/k for scrolling bookmark list
             if key.modifiers.contains(KeyModifiers::CONTROL) {
                 match key.code {
                     KeyCode::Char('j') | KeyCode::Char('J') | KeyCode::Down => {
-                        // Full mode: bottom panel exists — visible rows = panel height minus input bar (3) and borders (2).
-                        // Compact mode: bottom_panel_height is 0.  The list body gets
-                        //   terminal_height - header(1) - input(1) rows, so that is the page size.
-                        //   Using this value ensures max_offset = total.saturating_sub(available),
-                        //   which guarantees the last page fills the body exactly with no blank rows.
                         let max_visible = if ui.bottom_panel_height >= 5 {
                             (ui.bottom_panel_height as usize).saturating_sub(5).max(1)
                         } else {
@@ -246,24 +152,19 @@ impl EventHandler {
                     if !bookmark_name.is_empty() {
                         if let Some(node) = nav.get_selected_node() {
                             let node_borrowed = node.borrow();
-                            // Bookmarks must be directories only
                             let path = if node_borrowed.is_dir {
-                                // Directory - use it directly
                                 node_borrowed.path.clone()
                             } else {
-                                // File - use parent directory
                                 node_borrowed
                                     .path
                                     .parent()
                                     .map(|p| p.to_path_buf())
                                     .unwrap_or_else(|| node_borrowed.path.clone())
                             };
-
                             let dir_name = path
                                 .file_name()
                                 .and_then(|n| n.to_str())
                                 .map(|s| s.to_string());
-
                             drop(node_borrowed);
                             let _ = bookmarks.add(bookmark_name, path, dir_name);
                         }
@@ -279,333 +180,31 @@ impl EventHandler {
                     bookmarks.backspace();
                     return Ok(Some(PathBuf::new()));
                 }
-                _ => {
-                    return Ok(Some(PathBuf::new()));
-                }
+                _ => return Ok(Some(PathBuf::new())),
             }
         }
 
-        // In fullscreen viewer mode, only allow specific keys for file viewing
-        if *fullscreen_viewer {
-            // File search mode in fullscreen viewer
-            if file_viewer.search_mode {
-                return self.handle_file_search_input(key, file_viewer);
-            }
-
-            // Visual selection mode in fullscreen viewer
-            if file_viewer.visual_mode {
-                return self.handle_visual_mode_input(key, file_viewer, ui, config);
-            }
-
-            // Handle Esc key - clear search if active, otherwise exit
-            if matches!(key.code, KeyCode::Esc) {
-                if !file_viewer.search_results.is_empty() {
-                    file_viewer.clear_search();
-                    return Ok(Some(PathBuf::new()));
-                }
-                return Ok(None);
-            }
-
-            // Handle q key - return to tree view (stay in program)
-            if matches!(key.code, KeyCode::Char('q') | KeyCode::Char('Q')) {
-                *fullscreen_viewer = false;
-                *need_terminal_clear = true; // Clear terminal to remove mouse tracking artifacts
-                return Ok(Some(PathBuf::new())); // Stay in program, just switch to tree view
-            }
-
-            // Handle Ctrl+j/k for file navigation in same directory
-            if key.modifiers.contains(KeyModifiers::CONTROL) {
-                match key.code {
-                    KeyCode::Char('j') | KeyCode::Char('J') => {
-                        // Move to next file in directory
-                        nav.move_down();
-                        if let Some(node) = nav.get_selected_node() {
-                            let _ = ui.load_file_for_viewer(
-                                file_viewer,
-                                &node.borrow().path,
-                                config.behavior.max_file_lines,
-                                true,
-                                config,
-                            );
-                        }
-                        return Ok(Some(PathBuf::new()));
-                    }
-                    KeyCode::Char('k') | KeyCode::Char('K') => {
-                        // Move to previous file in directory
-                        nav.move_up();
-                        if let Some(node) = nav.get_selected_node() {
-                            let _ = ui.load_file_for_viewer(
-                                file_viewer,
-                                &node.borrow().path,
-                                config.behavior.max_file_lines,
-                                true,
-                                config,
-                            );
-                        }
-                        return Ok(Some(PathBuf::new()));
-                    }
-                    _ => {
-                        // Ignore all other Ctrl combinations in fullscreen mode
-                        return Ok(Some(PathBuf::new()));
-                    }
-                }
-            }
-
-            // Handle fullscreen-specific keys
-            match key.code {
-                _ if config.keybindings.is_visual_mode(key.code) => {
-                    // Enter visual selection mode (default: Shift+V)
-                    file_viewer.enter_visual_mode();
-                    return Ok(Some(PathBuf::new()));
-                }
-                KeyCode::Char('/') => {
-                    // Enter file search mode
-                    file_viewer.enter_search_mode();
-                    return Ok(Some(PathBuf::new()));
-                }
-                KeyCode::Char('n') if !file_viewer.search_results.is_empty() => {
-                    // Next search match (only if there are results)
-                    file_viewer.next_match();
-                    return Ok(Some(PathBuf::new()));
-                }
-                KeyCode::Char('N') if !file_viewer.search_results.is_empty() => {
-                    // Previous search match (only if there are results)
-                    file_viewer.prev_match();
-                    return Ok(Some(PathBuf::new()));
-                }
-                KeyCode::Char('j') | KeyCode::Down => {
-                    // Scroll down (j or Down arrow)
-                    let content_height = ui.viewer_area_height.saturating_sub(2) as usize;
-                    let lines_to_show = content_height.saturating_sub(2);
-                    file_viewer.scroll_down(lines_to_show);
-                    return Ok(Some(PathBuf::new()));
-                }
-                KeyCode::Char('k') | KeyCode::Up => {
-                    // Scroll up (k or Up arrow)
-                    file_viewer.scroll_up();
-                    return Ok(Some(PathBuf::new()));
-                }
-                _ if config.keybindings.is_show_line_numbers(key.code) => {
-                    // Toggle line numbers (only in fullscreen mode)
-                    file_viewer.toggle_line_numbers();
-                    return Ok(Some(PathBuf::new()));
-                }
-                _ if config.keybindings.is_toggle_wrap(key.code) => {
-                    // Toggle line wrapping (only in fullscreen mode)
-                    file_viewer.toggle_wrap();
-                    // Save current scroll position
-                    let saved_scroll = file_viewer.scroll;
-                    // Reload the current file to apply wrapping changes
-                    if let Some(node) = nav.get_selected_node() {
-                        let _ = ui.load_file_for_viewer(
-                            file_viewer,
-                            &node.borrow().path,
-                            config.behavior.max_file_lines,
-                            true,
-                            config,
-                        );
-                        // Restore scroll position (clamped to content length)
-                        file_viewer.scroll =
-                            saved_scroll.min(file_viewer.content.len().saturating_sub(1));
-                    }
-                    return Ok(Some(PathBuf::new()));
-                }
-                KeyCode::Char('e') | KeyCode::Char('E') => {
-                    // Open file in editor (or hex editor for binary files)
-                    if let Some(node) = nav.get_selected_node() {
-                        let node_borrowed = node.borrow();
-                        if !node_borrowed.is_dir {
-                            let path = node_borrowed.path.clone();
-                            drop(node_borrowed);
-
-                            // Check if binary file
-                            if file_viewer.is_binary {
-                                // Return special marker for hex editor
-                                let marker_path =
-                                    PathBuf::from(format!("HEXEDITOR:{}", path.display()));
-                                return Ok(Some(marker_path));
-                            } else {
-                                // Return special marker for text editor
-                                let marker_path =
-                                    PathBuf::from(format!("EDITOR:{}", path.display()));
-                                return Ok(Some(marker_path));
-                            }
-                        }
-                    }
-                    return Ok(Some(PathBuf::new()));
-                }
-                KeyCode::Char('c') | KeyCode::Char('C') => {
-                    // Copy path to clipboard
-                    if let Some(node) = nav.get_selected_node() {
-                        if let Ok(mut clipboard) = Clipboard::new() {
-                            let _ = clipboard.set_text(node.borrow().path.display().to_string());
-                        }
-                    }
-                    return Ok(Some(PathBuf::new()));
-                }
-                KeyCode::Char('o') | KeyCode::Char('O') => {
-                    // Open in file manager
-                    if let Some(node) = nav.get_selected_node() {
-                        let node_borrowed = node.borrow();
-                        let path_to_open = if node_borrowed.is_dir {
-                            node_borrowed.path.clone()
-                        } else {
-                            node_borrowed
-                                .path
-                                .parent()
-                                .unwrap_or(&node_borrowed.path)
-                                .to_path_buf()
-                        };
-                        drop(node_borrowed);
-                        let marker_path =
-                            PathBuf::from(format!("FILEMGR:{}", path_to_open.display()));
-                        return Ok(Some(marker_path));
-                    }
-                    return Ok(Some(PathBuf::new()));
-                }
-                KeyCode::PageUp => {
-                    // Scroll up by page
-                    let visible_height = ui.viewer_area_height.saturating_sub(4) as usize;
-                    file_viewer.scroll_page_up(visible_height);
-                    return Ok(Some(PathBuf::new()));
-                }
-                KeyCode::PageDown => {
-                    // Scroll down by page
-                    let visible_height = ui.viewer_area_height.saturating_sub(4) as usize;
-                    let max_visible_lines = visible_height.saturating_sub(2);
-                    file_viewer.scroll_page_down(visible_height, max_visible_lines);
-                    return Ok(Some(PathBuf::new()));
-                }
-                KeyCode::Home => {
-                    // Switch to head mode (show first N lines) and reload file
-                    if file_viewer.can_use_tail_mode() && file_viewer.tail_mode {
-                        file_viewer.enable_head_mode();
-                        // Reload file with head mode
-                        if let Some(node) = nav.get_selected_node() {
-                            let _ = ui.load_file_for_viewer(
-                                file_viewer,
-                                &node.borrow().path,
-                                config.behavior.max_file_lines,
-                                true,
-                                config,
-                            );
-                        }
-                    } else {
-                        // Normal Home behavior - jump to top
-                        file_viewer.reset_scroll();
-                    }
-                    return Ok(Some(PathBuf::new()));
-                }
-                KeyCode::End => {
-                    // Switch to tail mode (show last N lines) and reload file
-                    if file_viewer.can_use_tail_mode() && !file_viewer.tail_mode {
-                        file_viewer.enable_tail_mode();
-                        // Reload file with tail mode
-                        if let Some(node) = nav.get_selected_node() {
-                            let _ = ui.load_file_for_viewer(
-                                file_viewer,
-                                &node.borrow().path,
-                                config.behavior.max_file_lines,
-                                true,
-                                config,
-                            );
-                        }
-                        // Scroll to end after switching to tail mode
-                        let visible_height = ui.viewer_area_height.saturating_sub(4) as usize;
-                        file_viewer.scroll_to_end(visible_height);
-                    } else {
-                        // Normal End behavior - jump to bottom
-                        let visible_height = ui.viewer_area_height.saturating_sub(4) as usize;
-                        file_viewer.scroll_to_end(visible_height);
-                    }
-                    return Ok(Some(PathBuf::new()));
-                }
-                _ => {
-                    // Ignore all other keys in fullscreen mode
-                    return Ok(Some(PathBuf::new()));
-                }
-            }
-        }
-
-        // Handle Ctrl+j/k for scrolling in file viewer or help
-        if key.modifiers.contains(KeyModifiers::CONTROL) {
-            match key.code {
-                KeyCode::Char('j') => {
-                    if *show_files || *show_help {
-                        file_viewer.scroll_down_simple();
-                    }
-                    return Ok(Some(PathBuf::new()));
-                }
-                KeyCode::Char('k') => {
-                    if *show_files || *show_help {
-                        file_viewer.scroll_up();
-                    }
-                    return Ok(Some(PathBuf::new()));
-                }
-                _ => {}
-            }
-        }
-
-        // Handle PageUp/PageDown/Home/End in file viewer mode (split view)
-        if *show_files || *show_help {
-            match key.code {
-                KeyCode::PageUp => {
-                    let visible_height = ui.viewer_area_height.saturating_sub(4) as usize;
-                    file_viewer.scroll_page_up(visible_height);
-                    return Ok(Some(PathBuf::new()));
-                }
-                KeyCode::PageDown => {
-                    let visible_height = ui.viewer_area_height.saturating_sub(4) as usize;
-                    let max_visible_lines = visible_height.saturating_sub(2);
-                    file_viewer.scroll_page_down(visible_height, max_visible_lines);
-                    return Ok(Some(PathBuf::new()));
-                }
-                KeyCode::Home => {
-                    file_viewer.reset_scroll();
-                    return Ok(Some(PathBuf::new()));
-                }
-                KeyCode::End => {
-                    let visible_height = ui.viewer_area_height.saturating_sub(4) as usize;
-                    file_viewer.scroll_to_end(visible_height);
-                    return Ok(Some(PathBuf::new()));
-                }
-                _ => {}
-            }
-        }
-
-        // Handle Esc key - always exits without directory change
-        // (fullscreen mode already handled above)
+        // Esc — cancel search/exit
         if matches!(key.code, KeyCode::Esc) {
             if search.is_active() {
-                // If search is running, cancel it but keep results
                 search.cancel_search();
                 return Ok(Some(PathBuf::new()));
             } else if search.show_results {
-                // If showing results, close them
                 search.close_results();
-                return Ok(Some(PathBuf::new()));
-            } else if dir_size_cache.is_any_calculating() {
-                // Cancel pending size calculations; already-computed results remain visible
-                dir_size_cache.cancel();
                 return Ok(Some(PathBuf::new()));
             } else {
                 return Ok(None);
             }
         }
 
-        // Handle q key - exits with directory change
-        // (fullscreen mode already handled above)
+        // q — exit, output path of selected directory for shell
         if matches!(key.code, KeyCode::Char('q') | KeyCode::Char('Q')) {
-            // Normal mode: q exits with cd to selected directory (or parent if file)
             if let Some(node) = nav.get_selected_node() {
                 let node_borrowed = node.borrow();
                 if node_borrowed.is_dir {
                     return Ok(Some(node_borrowed.path.clone()));
-                } else {
-                    // If cursor is on a file, return parent directory
-                    if let Some(parent) = node_borrowed.path.parent() {
-                        return Ok(Some(parent.to_path_buf()));
-                    }
+                } else if let Some(parent) = node_borrowed.path.parent() {
+                    return Ok(Some(parent.to_path_buf()));
                 }
             }
             return Ok(None);
@@ -625,18 +224,6 @@ impl EventHandler {
                     search.move_down();
                 } else {
                     nav.move_down();
-                    if *show_files || *fullscreen_viewer {
-                        if let Some(node) = nav.get_selected_node() {
-                            let _ = ui.load_file_for_viewer(
-                                file_viewer,
-                                &node.borrow().path,
-                                config.behavior.max_file_lines,
-                                *fullscreen_viewer,
-                                config,
-                            );
-                            *show_help = false;
-                        }
-                    }
                 }
             }
             KeyCode::Char('k') | KeyCode::Up => {
@@ -644,80 +231,21 @@ impl EventHandler {
                     search.move_up();
                 } else {
                     nav.move_up();
-                    if *show_files || *fullscreen_viewer {
-                        if let Some(node) = nav.get_selected_node() {
-                            let _ = ui.load_file_for_viewer(
-                                file_viewer,
-                                &node.borrow().path,
-                                config.behavior.max_file_lines,
-                                *fullscreen_viewer,
-                                config,
-                            );
-                            *show_help = false;
-                        }
-                    }
                 }
             }
             KeyCode::Enter => {
                 if search.focus_on_results && search.show_results {
-                    // In search mode: jump to search result
                     if let Some(path) = search.get_selected_result() {
-                        let _ = nav.expand_path_to_node(&path, *show_files);
+                        let _ = nav.expand_path_to_node(&path, false);
                         search.focus_on_results = false;
-                        if *show_files {
-                            let _ = ui.load_file_for_viewer(
-                                file_viewer,
-                                &path,
-                                config.behavior.max_file_lines,
-                                false,
-                                config,
-                            );
-                            *show_help = false;
-                        }
                     }
                     return Ok(Some(PathBuf::new()));
-                } else {
-                    // Normal mode: Enter on directory -> go inside (change root)
-                    if let Some(node) = nav.get_selected_node() {
-                        let node_borrowed = node.borrow();
-                        if node_borrowed.is_dir {
-                            let path = node_borrowed.path.clone();
-                            let dir_name = node_borrowed.name.clone();
-                            drop(node_borrowed);
-
-                            // Try to navigate and check for errors
-                            if let Ok(Some(error_msg)) = nav.go_to_directory(path, *show_files) {
-                                // Error occurred - show details in file viewer if show_files is enabled
-                                if *show_files {
-                                    let error_content = vec![
-                                        format!("Error accessing directory: {}", dir_name),
-                                        String::new(),
-                                        error_msg,
-                                        String::new(),
-                                        "This directory cannot be accessed. Possible reasons:"
-                                            .to_string(),
-                                        "- Insufficient permissions".to_string(),
-                                        "- Directory was removed or renamed".to_string(),
-                                        "- Filesystem error".to_string(),
-                                    ];
-                                    file_viewer.load_content(error_content);
-                                    *show_help = false;
-                                }
-                            } else {
-                                // Success - load file preview if needed
-                                if *show_files {
-                                    if let Some(node) = nav.get_selected_node() {
-                                        let _ = ui.load_file_for_viewer(
-                                            file_viewer,
-                                            &node.borrow().path,
-                                            config.behavior.max_file_lines,
-                                            false,
-                                            config,
-                                        );
-                                    }
-                                }
-                            }
-                        }
+                } else if let Some(node) = nav.get_selected_node() {
+                    let node_borrowed = node.borrow();
+                    if node_borrowed.is_dir {
+                        let path = node_borrowed.path.clone();
+                        drop(node_borrowed);
+                        let _ = nav.go_to_directory(path, false);
                     }
                 }
             }
@@ -726,27 +254,8 @@ impl EventHandler {
                     let node_borrowed = node.borrow();
                     if node_borrowed.is_dir {
                         let path = node_borrowed.path.clone();
-                        let dir_name = node_borrowed.name.clone();
                         drop(node_borrowed);
-
-                        // Toggle node and check for errors
-                        if let Ok(Some(error_msg)) = nav.toggle_node(&path, *show_files) {
-                            // Error occurred - show details in file viewer if show_files is enabled
-                            if *show_files {
-                                let error_content = vec![
-                                    format!("Error accessing directory: {}", dir_name),
-                                    String::new(),
-                                    error_msg,
-                                    String::new(),
-                                    "This directory cannot be read. Possible reasons:".to_string(),
-                                    "- Insufficient permissions".to_string(),
-                                    "- Directory was removed or renamed".to_string(),
-                                    "- Filesystem error".to_string(),
-                                ];
-                                file_viewer.load_content(error_content);
-                                *show_help = false;
-                            }
-                        }
+                        let _ = nav.toggle_node(&path, false);
                     }
                 }
             }
@@ -756,167 +265,22 @@ impl EventHandler {
                     if node_borrowed.is_dir {
                         let path = node_borrowed.path.clone();
                         drop(node_borrowed);
-                        let _ = nav.toggle_node(&path, *show_files)?;
+                        let _ = nav.toggle_node(&path, false)?;
                     }
                 }
             }
             KeyCode::Char('u') | KeyCode::Backspace => {
-                nav.go_to_parent(*show_files)?;
-            }
-            _ if config.keybindings.is_toggle_files(key.code) => {
-                *show_files = !*show_files;
-                *show_help = false;
-                nav.reload_tree(*show_files)?;
-
-                // Fix selection if it's out of bounds after reload
-                if !nav.flat_list.is_empty() {
-                    if nav.selected >= nav.flat_list.len() {
-                        nav.selected = nav.flat_list.len() - 1;
-                    }
-                } else {
-                    // Empty list - set to 0
-                    nav.selected = 0;
-                }
-
-                if *show_files {
-                    // Only load file if we have a valid selection
-                    if !nav.flat_list.is_empty() {
-                        if let Some(node) = nav.get_selected_node() {
-                            let _ = ui.load_file_for_viewer(
-                                file_viewer,
-                                &node.borrow().path,
-                                config.behavior.max_file_lines,
-                                false,
-                                config,
-                            );
-                        }
-                    }
-                }
-            }
-            _ if config.keybindings.is_toggle_help(key.code) => {
-                *show_help = !*show_help;
-
-                if *show_help {
-                    // Save current show_files state before opening help
-                    *show_files_before_help = *show_files;
-
-                    // Load help content into file viewer for scrolling
-                    file_viewer.load_content(crate::ui::get_help_content());
-                    if !*show_files {
-                        *show_files = true;
-                        nav.reload_tree(*show_files)?;
-                    }
-                } else {
-                    // Restore previous show_files state
-                    if *show_files != *show_files_before_help {
-                        *show_files = *show_files_before_help;
-                        nav.reload_tree(*show_files)?;
-                    }
-                    file_viewer.reset_scroll();
-                }
-            }
-            KeyCode::Char('v') => {
-                // Toggle fullscreen viewer mode
-                if let Some(node) = nav.get_selected_node() {
-                    let node_borrowed = node.borrow();
-                    if !node_borrowed.is_dir {
-                        *fullscreen_viewer = !*fullscreen_viewer;
-                        *show_help = false;
-
-                        if *fullscreen_viewer {
-                            // Load file for fullscreen viewing with full terminal width
-                            let _ = ui.load_file_for_viewer(
-                                file_viewer,
-                                &node_borrowed.path,
-                                config.behavior.max_file_lines,
-                                true,
-                                config,
-                            );
-                        }
-                    }
-                }
-            }
-            _ if config.keybindings.is_copy_path(key.code) => {
-                if let Some(node) = nav.get_selected_node() {
-                    if let Ok(mut clipboard) = Clipboard::new() {
-                        let _ = clipboard.set_text(node.borrow().path.display().to_string());
-                    }
-                }
-            }
-            _ if config.keybindings.is_open_editor(key.code) => {
-                // Open file in external editor (or hex editor for binary files)
-                if let Some(node) = nav.get_selected_node() {
-                    let node_borrowed = node.borrow();
-                    if !node_borrowed.is_dir {
-                        let path = node_borrowed.path.clone();
-                        drop(node_borrowed);
-
-                        // Check if file is binary
-                        use crate::file_viewer::FileViewer;
-                        use std::path::Path;
-                        let is_binary = FileViewer::is_binary_file(Path::new(&path));
-
-                        if is_binary {
-                            // Return special marker for hex editor
-                            let marker_path =
-                                PathBuf::from(format!("HEXEDITOR:{}", path.display()));
-                            return Ok(Some(marker_path));
-                        } else {
-                            // Return special marker for text editor
-                            let marker_path = PathBuf::from(format!("EDITOR:{}", path.display()));
-                            return Ok(Some(marker_path));
-                        }
-                    }
-                }
-            }
-            _ if config.keybindings.is_open_file_manager(key.code) => {
-                // Open in file manager
-                if let Some(node) = nav.get_selected_node() {
-                    let node_borrowed = node.borrow();
-                    let path_to_open = if node_borrowed.is_dir {
-                        // For directories, open the directory itself
-                        node_borrowed.path.clone()
-                    } else {
-                        // For files, open the parent directory
-                        node_borrowed
-                            .path
-                            .parent()
-                            .unwrap_or(&node_borrowed.path)
-                            .to_path_buf()
-                    };
-                    // Return special marker path to signal file manager opening
-                    let marker_path = PathBuf::from(format!("FILEMGR:{}", path_to_open.display()));
-                    return Ok(Some(marker_path));
-                }
+                nav.go_to_parent(false)?;
             }
             _ if config.keybindings.is_create_bookmark(key.code) => {
-                // Enter bookmark creation mode
                 bookmarks.enter_creation_mode();
             }
             _ if config.keybindings.is_select_bookmark(key.code) => {
-                // Enter bookmark selection mode
                 bookmarks.enter_selection_mode();
             }
             _ if config.keybindings.is_select_disk(key.code) => {
-                // Enter disk selection mode
                 let current_path = nav.root.borrow().path.clone();
                 disks.enter_selection_mode(Some(&current_path));
-            }
-            KeyCode::Char('z') => {
-                // Toggle directory size display
-                *show_sizes = !*show_sizes;
-                if *show_sizes {
-                    // Start calculating sizes for visible directories
-                    for node_ref in &nav.flat_list {
-                        let node = node_ref.borrow();
-                        if node.is_dir {
-                            dir_size_cache.calculate_async(node.path.clone());
-                        }
-                    }
-                } else {
-                    // Clear cache when disabling
-                    dir_size_cache.clear();
-                }
             }
             _ => {}
         }
@@ -929,7 +293,6 @@ impl EventHandler {
         key: KeyEvent,
         search: &mut Search,
         nav: &Navigation,
-        show_files: bool,
     ) -> Result<Option<PathBuf>> {
         match key.code {
             KeyCode::Esc => {
@@ -937,7 +300,7 @@ impl EventHandler {
                 Ok(Some(PathBuf::new()))
             }
             KeyCode::Enter => {
-                search.perform_search(&nav.root, show_files, nav.show_hidden, nav.follow_symlinks);
+                search.perform_search(&nav.root, false, nav.show_hidden, nav.follow_symlinks);
                 Ok(Some(PathBuf::new()))
             }
             KeyCode::Char(c) => {
@@ -952,176 +315,25 @@ impl EventHandler {
         }
     }
 
-    fn handle_file_search_input(
-        &mut self,
-        key: KeyEvent,
-        file_viewer: &mut FileViewer,
-    ) -> Result<Option<PathBuf>> {
-        match key.code {
-            KeyCode::Esc => {
-                file_viewer.clear_search(); // Clear everything
-                Ok(Some(PathBuf::new()))
-            }
-            KeyCode::Enter => {
-                file_viewer.perform_search(); // This will scroll to first match
-                file_viewer.exit_search_mode(); // Exit input mode but keep results
-                Ok(Some(PathBuf::new()))
-            }
-            KeyCode::Char(c) => {
-                file_viewer.add_search_char(c);
-                Ok(Some(PathBuf::new()))
-            }
-            KeyCode::Backspace => {
-                file_viewer.search_backspace();
-                Ok(Some(PathBuf::new()))
-            }
-            _ => Ok(Some(PathBuf::new())),
-        }
-    }
-
-    fn handle_visual_mode_input(
-        &mut self,
-        key: KeyEvent,
-        file_viewer: &mut FileViewer,
-        ui: &UI,
-        config: &Config,
-    ) -> Result<Option<PathBuf>> {
-        let visible_height = ui.viewer_area_height.saturating_sub(2) as usize;
-
-        match key.code {
-            KeyCode::Esc => {
-                // Exit visual mode without copying (Esc always exits)
-                file_viewer.exit_visual_mode();
-                Ok(Some(PathBuf::new()))
-            }
-            _ if config.keybindings.is_visual_mode(key.code) => {
-                // Exit visual mode without copying (toggle key)
-                file_viewer.exit_visual_mode();
-                Ok(Some(PathBuf::new()))
-            }
-            _ if config.keybindings.is_visual_copy(key.code) => {
-                // Copy selection and exit visual mode
-                let _ = file_viewer.copy_selection();
-                Ok(Some(PathBuf::new()))
-            }
-            KeyCode::Char('j') | KeyCode::Down => {
-                // Move cursor down (expand selection)
-                file_viewer.visual_move_down();
-                file_viewer.ensure_visual_cursor_visible(visible_height);
-                Ok(Some(PathBuf::new()))
-            }
-            KeyCode::Char('k') | KeyCode::Up => {
-                // Move cursor up (expand selection)
-                file_viewer.visual_move_up();
-                file_viewer.ensure_visual_cursor_visible(visible_height);
-                Ok(Some(PathBuf::new()))
-            }
-            KeyCode::PageDown => {
-                // Jump down by page
-                for _ in 0..visible_height {
-                    file_viewer.visual_move_down();
-                }
-                file_viewer.ensure_visual_cursor_visible(visible_height);
-                Ok(Some(PathBuf::new()))
-            }
-            KeyCode::PageUp => {
-                // Jump up by page
-                for _ in 0..visible_height {
-                    file_viewer.visual_move_up();
-                }
-                file_viewer.ensure_visual_cursor_visible(visible_height);
-                Ok(Some(PathBuf::new()))
-            }
-            KeyCode::Home => {
-                // Jump to start of file
-                file_viewer.visual_cursor = 0;
-                file_viewer.ensure_visual_cursor_visible(visible_height);
-                Ok(Some(PathBuf::new()))
-            }
-            KeyCode::End => {
-                // Jump to end of file
-                file_viewer.visual_cursor = file_viewer.content.len().saturating_sub(1);
-                file_viewer.ensure_visual_cursor_visible(visible_height);
-                Ok(Some(PathBuf::new()))
-            }
-            _ => Ok(Some(PathBuf::new())),
-        }
-    }
-
     /// Handle mouse events
     pub fn handle_mouse(
         &mut self,
         mouse: MouseEvent,
         nav: &mut Navigation,
-        file_viewer: &mut FileViewer,
         search: &mut Search,
         bookmarks: &mut Bookmarks,
         ui: &mut UI,
-        show_files: &mut bool,
-        show_help: &mut bool,
-        fullscreen_viewer: bool,
         config: &Config,
     ) -> Result<()> {
         match mouse.kind {
             MouseEventKind::Down(MouseButton::Left) => {
-                self.handle_mouse_click(
-                    mouse,
-                    nav,
-                    file_viewer,
-                    search,
-                    bookmarks,
-                    ui,
-                    show_files,
-                    show_help,
-                    fullscreen_viewer,
-                    config,
-                )?;
+                self.handle_mouse_click(mouse, nav, ui, config)?;
             }
-            MouseEventKind::Drag(MouseButton::Left)
-                // Ignore dragging in fullscreen mode
-                if !fullscreen_viewer => {
-                    if self.dragging && ui.terminal_width > 0 {
-                        // Horizontal drag - adjust split position
-                        let new_pos = (mouse.column * 100) / ui.terminal_width;
-                        ui.adjust_split(new_pos);
-                    } else if self.dragging_vertical && ui.terminal_height > 0 {
-                        // Vertical drag - adjust bottom panel split position
-                        let new_pos = (mouse.row * 100) / ui.terminal_height;
-                        ui.adjust_bottom_split(new_pos);
-                    }
-                }
-            MouseEventKind::Up(MouseButton::Left)
-                if !fullscreen_viewer => {
-                    self.dragging = false;
-                    self.dragging_vertical = false;
-                }
             MouseEventKind::ScrollUp => {
-                self.handle_scroll_up(
-                    mouse,
-                    nav,
-                    file_viewer,
-                    search,
-                    bookmarks,
-                    ui,
-                    show_files,
-                    show_help,
-                    fullscreen_viewer,
-                    config,
-                )?;
+                self.handle_scroll_up(mouse, nav, search, bookmarks, ui, config)?;
             }
             MouseEventKind::ScrollDown => {
-                self.handle_scroll_down(
-                    mouse,
-                    nav,
-                    file_viewer,
-                    search,
-                    bookmarks,
-                    ui,
-                    show_files,
-                    show_help,
-                    fullscreen_viewer,
-                    config,
-                )?;
+                self.handle_scroll_down(mouse, nav, search, bookmarks, ui, config)?;
             }
             _ => {}
         }
@@ -1132,362 +344,105 @@ impl EventHandler {
         &mut self,
         mouse: MouseEvent,
         nav: &mut Navigation,
-        file_viewer: &mut FileViewer,
-        search: &mut Search,
-        bookmarks: &mut Bookmarks,
-        ui: &mut UI,
-        show_files: &mut bool,
-        show_help: &mut bool,
-        fullscreen_viewer: bool,
+        ui: &UI,
         config: &Config,
     ) -> Result<()> {
-        // In fullscreen mode, ignore mouse clicks
-        if fullscreen_viewer {
-            return Ok(());
-        }
-
-        // Check click in search results panel
-        if search.show_results
-            && ui.bottom_panel_height > 0
-            && mouse.row > ui.bottom_panel_top
-            && mouse.row < ui.bottom_panel_top + ui.bottom_panel_height.saturating_sub(1)
-        {
-            let results_count = search.get_results_count();
-            if results_count > 0 {
-                let clicked_row = mouse.row.saturating_sub(ui.bottom_panel_top + 1) as usize;
-                if clicked_row < results_count {
-                    let now = Instant::now();
-                    let is_double_click =
-                        if let Some((last_time, last_idx)) = self.last_search_click_time {
-                            clicked_row == last_idx
-                                && now.duration_since(last_time)
-                                    < Duration::from_millis(config.behavior.double_click_timeout_ms)
-                        } else {
-                            false
-                        };
-
-                    if is_double_click {
-                        // Double-click: jump to search result
-                        search.set_selected(clicked_row);
-                        if let Some(path) = search.get_selected_result() {
-                            let _ = nav.expand_path_to_node(&path, *show_files);
-                            search.focus_on_results = false;
-                            if *show_files {
-                                let _ = ui.load_file_for_viewer(
-                                    file_viewer,
-                                    &path,
-                                    config.behavior.max_file_lines,
-                                    false,
-                                    config,
-                                );
-                                *show_help = false;
-                            }
-                        }
-                        self.last_search_click_time = None;
-                    } else {
-                        // Single click: just select the result
-                        search.set_selected(clicked_row);
-                        self.last_search_click_time = Some((now, clicked_row));
-                    }
-                }
-            }
-            return Ok(());
-        }
-
-        // Check click in bookmarks panel (selection mode only, not creation mode)
-        if bookmarks.is_selecting
-            && ui.bottom_panel_height > 0
-            && mouse.row > ui.bottom_panel_top
-            && mouse.row < ui.bottom_panel_top + ui.bottom_panel_height.saturating_sub(1)
-        {
-            let filtered = bookmarks.get_filtered_bookmarks();
-            if !filtered.is_empty() {
-                let clicked_row = mouse.row.saturating_sub(ui.bottom_panel_top + 1) as usize;
-                if clicked_row < filtered.len() {
-                    let now = Instant::now();
-                    let is_double_click =
-                        if let Some((last_time, last_idx)) = self.last_bookmark_click_time {
-                            clicked_row == last_idx
-                                && now.duration_since(last_time)
-                                    < Duration::from_millis(config.behavior.double_click_timeout_ms)
-                        } else {
-                            false
-                        };
-
-                    if is_double_click {
-                        // Double-click: navigate to bookmark
-                        bookmarks.selected_index = clicked_row;
-                        if let Some(bookmark) = bookmarks.get_selected_bookmark() {
-                            let path = bookmark.path.clone();
-                            let bookmark_key = bookmark.key.clone();
-                            let dir_name = bookmark
-                                .name
-                                .clone()
-                                .unwrap_or_else(|| bookmark_key.clone());
-                            bookmarks.exit_selection_mode();
-
-                            // Try to navigate and check for errors
-                            if let Ok(Some(error_msg)) = nav.go_to_directory(path, *show_files) {
-                                // Error occurred - show details in file viewer if show_files is enabled
-                                if *show_files {
-                                    let error_content = vec![
-                                        format!(
-                                            "Error accessing bookmark '{}' ({})",
-                                            bookmark_key, dir_name
-                                        ),
-                                        String::new(),
-                                        error_msg,
-                                        String::new(),
-                                        "This directory cannot be accessed. Possible reasons:"
-                                            .to_string(),
-                                        "- Insufficient permissions".to_string(),
-                                        "- Directory was removed or renamed".to_string(),
-                                        "- Filesystem error".to_string(),
-                                    ];
-                                    file_viewer.load_content(error_content);
-                                    *show_help = false;
-                                }
-                            } else {
-                                // Success - load file preview if needed
-                                if *show_files {
-                                    if let Some(node) = nav.get_selected_node() {
-                                        let _ = ui.load_file_for_viewer(
-                                            file_viewer,
-                                            &node.borrow().path,
-                                            config.behavior.max_file_lines,
-                                            false,
-                                            config,
-                                        );
-                                    }
-                                }
-                            }
-                        }
-                        self.last_bookmark_click_time = None;
-                    } else {
-                        // Single click: just select the bookmark
-                        bookmarks.selected_index = clicked_row;
-                        self.last_bookmark_click_time = Some((now, clicked_row));
-                    }
-                }
-            }
-            return Ok(());
-        }
-
-        // Check click in tree area
         if mouse.column >= ui.tree_area_start
             && mouse.column < ui.tree_area_end
             && mouse.row >= ui.tree_area_top
             && mouse.row < ui.tree_area_top + ui.tree_area_height
         {
-            // Calculate clicked row accounting for scroll offset.
-            // tree_item_top is the absolute screen row of the first item, which
-            // differs between normal mode (tree_area_top + 1, block border) and
-            // compact mode (tree_area_top, no border).
             let clicked_row_visible = mouse.row.saturating_sub(ui.tree_item_top) as usize;
             let clicked_row = clicked_row_visible + ui.tree_scroll_offset;
 
             if clicked_row < nav.flat_list.len() {
                 let now = Instant::now();
-                let is_double_click = if let Some((last_time, last_idx)) = self.last_click_time {
-                    clicked_row == last_idx
-                        && now.duration_since(last_time)
-                            < Duration::from_millis(config.behavior.double_click_timeout_ms)
-                } else {
-                    false
-                };
+                let is_double_click =
+                    if let Some((last_time, last_idx)) = self.last_click_time {
+                        clicked_row == last_idx
+                            && now.duration_since(last_time)
+                                < Duration::from_millis(
+                                    config.behavior.double_click_timeout_ms,
+                                )
+                    } else {
+                        false
+                    };
 
                 if is_double_click {
                     let node = &nav.flat_list[clicked_row];
                     let node_borrowed = node.borrow();
                     if node_borrowed.is_dir {
                         let path = node_borrowed.path.clone();
-                        let dir_name = node_borrowed.name.clone();
                         drop(node_borrowed);
-
-                        // Toggle node and check for errors
-                        if let Ok(Some(error_msg)) = nav.toggle_node(&path, *show_files) {
-                            // Error occurred - show details in file viewer if show_files is enabled
-                            if *show_files {
-                                let error_content = vec![
-                                    format!("Error accessing directory: {}", dir_name),
-                                    String::new(),
-                                    error_msg,
-                                    String::new(),
-                                    "This directory cannot be read. Possible reasons:".to_string(),
-                                    "- Insufficient permissions".to_string(),
-                                    "- Directory was removed or renamed".to_string(),
-                                    "- Filesystem error".to_string(),
-                                ];
-                                file_viewer.load_content(error_content);
-                                *show_help = false;
-                            }
-                        }
+                        let _ = nav.toggle_node(&path, false);
                     }
                     self.last_click_time = None;
                 } else {
                     nav.selected = clicked_row;
                     self.last_click_time = Some((now, clicked_row));
-
-                    if *show_files || fullscreen_viewer {
-                        let path = nav.flat_list[clicked_row].borrow().path.clone();
-                        let _ = ui.load_file_for_viewer(
-                            file_viewer,
-                            &path,
-                            config.behavior.max_file_lines,
-                            fullscreen_viewer,
-                            config,
-                        );
-                        *show_help = false;
-                    }
                 }
             }
-        } else if *show_files {
-            // Check click on horizontal divider (between tree and file viewer)
-            let divider_col = (ui.terminal_width * ui.split_position) / 100;
-            if mouse.column.abs_diff(divider_col) <= 2 {
-                self.dragging = true;
-            }
         }
-
-        // Check click on vertical divider (top border of bottom panel)
-        if ui.bottom_panel_height > 0 {
-            // Check if click is on the top border of bottom panel (±1 row tolerance)
-            if mouse.row.abs_diff(ui.bottom_panel_top) <= 1 {
-                self.dragging_vertical = true;
-            }
-        }
-
         Ok(())
     }
 
     fn handle_scroll_up(
         &mut self,
-        mouse: MouseEvent,
+        _mouse: MouseEvent,
         nav: &mut Navigation,
-        file_viewer: &mut FileViewer,
         search: &mut Search,
         bookmarks: &mut Bookmarks,
-        ui: &mut UI,
-        show_files: &mut bool,
-        show_help: &mut bool,
-        fullscreen_viewer: bool,
+        ui: &UI,
         config: &Config,
     ) -> Result<()> {
-        // Check if mouse is over bottom panel (bookmarks/search)
-        if ui.bottom_panel_height > 0 && mouse.row >= ui.bottom_panel_top {
-            // Search results panel - scroll results list
+        // Bottom panel scrolling (bookmarks/search in non-compact layout)
+        if ui.bottom_panel_height > 0 {
             if search.show_results {
                 search.move_up();
                 return Ok(());
             }
-            // Bookmarks panel - scroll bookmarks list
-            if bookmarks.is_selecting || bookmarks.is_creating {
-                if bookmarks.is_selecting {
-                    bookmarks.move_up();
-                } else if bookmarks.is_creating {
-                    bookmarks.scroll_up();
-                }
+            if bookmarks.is_selecting {
+                bookmarks.move_up();
+                return Ok(());
+            }
+            if bookmarks.is_creating {
+                bookmarks.scroll_up();
                 return Ok(());
             }
         }
-
-        // In fullscreen mode with visual selection, move cursor up
-        if fullscreen_viewer && file_viewer.visual_mode {
-            let visible_height = ui.viewer_area_height.saturating_sub(2) as usize;
-            for _ in 0..config.behavior.mouse_scroll_lines {
-                file_viewer.visual_move_up();
-            }
-            file_viewer.ensure_visual_cursor_visible(visible_height);
-        // In fullscreen mode or in split view over file viewer area, scroll the file viewer
-        } else if fullscreen_viewer
-            || ((*show_files || *show_help)
-                && mouse.column >= ui.viewer_area_start
-                && mouse.row >= ui.viewer_area_top
-                && mouse.row < ui.viewer_area_top + ui.viewer_area_height)
-        {
-            for _ in 0..config.behavior.mouse_scroll_lines {
-                file_viewer.scroll_up();
-            }
-        } else {
+        for _ in 0..config.behavior.mouse_scroll_lines {
             nav.move_up();
-            if (*show_files || fullscreen_viewer) && !*show_help {
-                if let Some(node) = nav.get_selected_node() {
-                    let _ = ui.load_file_for_viewer(
-                        file_viewer,
-                        &node.borrow().path,
-                        config.behavior.max_file_lines,
-                        fullscreen_viewer,
-                        config,
-                    );
-                }
-            }
         }
         Ok(())
     }
 
     fn handle_scroll_down(
         &mut self,
-        mouse: MouseEvent,
+        _mouse: MouseEvent,
         nav: &mut Navigation,
-        file_viewer: &mut FileViewer,
         search: &mut Search,
         bookmarks: &mut Bookmarks,
-        ui: &mut UI,
-        show_files: &mut bool,
-        show_help: &mut bool,
-        fullscreen_viewer: bool,
+        ui: &UI,
         config: &Config,
     ) -> Result<()> {
-        // Check if mouse is over bottom panel (bookmarks/search)
-        if ui.bottom_panel_height > 0 && mouse.row >= ui.bottom_panel_top {
-            // Search results panel - scroll results list
+        if ui.bottom_panel_height > 0 {
             if search.show_results {
                 search.move_down();
                 return Ok(());
             }
-            // Bookmarks panel - scroll bookmarks list
-            if bookmarks.is_selecting || bookmarks.is_creating {
-                if bookmarks.is_selecting {
-                    bookmarks.move_down();
-                } else if bookmarks.is_creating {
-                    let max_visible = 10; // Conservative estimate
-                    bookmarks.scroll_down(max_visible);
-                }
+            if bookmarks.is_selecting {
+                bookmarks.move_down();
+                return Ok(());
+            }
+            if bookmarks.is_creating {
+                let max_visible = 10;
+                bookmarks.scroll_down(max_visible);
                 return Ok(());
             }
         }
-
-        // In fullscreen mode with visual selection, move cursor down
-        if fullscreen_viewer && file_viewer.visual_mode {
-            let visible_height = ui.viewer_area_height.saturating_sub(2) as usize;
-            for _ in 0..config.behavior.mouse_scroll_lines {
-                file_viewer.visual_move_down();
-            }
-            file_viewer.ensure_visual_cursor_visible(visible_height);
-        // In fullscreen mode or in split view over file viewer area, scroll the file viewer
-        } else if fullscreen_viewer
-            || ((*show_files || *show_help)
-                && mouse.column >= ui.viewer_area_start
-                && mouse.row >= ui.viewer_area_top
-                && mouse.row < ui.viewer_area_top + ui.viewer_area_height)
-        {
-            let content_height = ui.viewer_area_height.saturating_sub(2) as usize;
-            let lines_to_show = content_height.saturating_sub(2);
-            for _ in 0..config.behavior.mouse_scroll_lines {
-                file_viewer.scroll_down(lines_to_show);
-            }
-        } else if nav.selected < nav.flat_list.len().saturating_sub(1) {
-            nav.move_down();
-            if (*show_files || fullscreen_viewer) && !*show_help {
-                if let Some(node) = nav.get_selected_node() {
-                    let _ = ui.load_file_for_viewer(
-                        file_viewer,
-                        &node.borrow().path,
-                        config.behavior.max_file_lines,
-                        fullscreen_viewer,
-                        config,
-                    );
-                }
+        for _ in 0..config.behavior.mouse_scroll_lines {
+            if nav.selected < nav.flat_list.len().saturating_sub(1) {
+                nav.move_down();
             }
         }
         Ok(())

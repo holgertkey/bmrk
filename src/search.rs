@@ -481,11 +481,13 @@ impl Search {
     }
 
     /// Get number of search results
+    #[allow(dead_code)]
     pub fn get_results_count(&self) -> usize {
         self.results.len()
     }
 
     /// Set selected index (with bounds checking)
+    #[allow(dead_code)]
     pub fn set_selected(&mut self, index: usize) {
         if index < self.results.len() {
             self.selected = index;

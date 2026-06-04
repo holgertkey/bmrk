@@ -1,11 +1,8 @@
 mod app;
 mod bookmarks;
 mod config;
-mod dir_size;
 mod disks;
 mod event_handler;
-mod file_icons;
-mod file_viewer;
 mod navigation;
 mod platform;
 mod search;
@@ -18,26 +15,19 @@ use anyhow::Result;
 use app::App;
 use bookmarks::Bookmarks;
 use clap::Parser;
-use config::Config;
-use platform::{canonicalize_and_normalize, open_external_program};
+use platform::canonicalize_and_normalize;
 use std::path::PathBuf;
-use terminal::{
-    cleanup_terminal, cleanup_terminal_compact, run_app, setup_terminal, setup_terminal_compact,
-};
+use terminal::{cleanup_terminal_compact, run_app, setup_terminal_compact};
 
 #[derive(Parser)]
-#[command(name = "dtree")]
-#[command(about = "Interactive directory tree navigator")]
+#[command(name = "bm")]
+#[command(about = "Interactive bookmark manager and directory navigator")]
 #[command(disable_help_flag = true)]
 #[command(disable_version_flag = true)]
 struct Args {
     /// Print help information
     #[arg(short = 'h', long = "help")]
     help: bool,
-
-    /// View file directly in fullscreen mode
-    #[arg(short = 'v', long = "view", conflicts_with = "version")]
-    view: bool,
 
     /// Print version information
     #[arg(long = "version")]
@@ -52,31 +42,14 @@ struct Args {
     args: Vec<String>,
 }
 
-/// Open a file in the external editor specified in config
-fn open_in_editor(file_path: &str, config: &Config) -> Result<()> {
-    open_external_program(&config.behavior.editor, file_path)
-}
-
-/// Open a binary file in the external hex editor specified in config
-fn open_in_hex_editor(file_path: &str, config: &Config) -> Result<()> {
-    open_external_program(&config.behavior.hex_editor, file_path)
-}
-
-/// Open a directory in the external file manager specified in config
-fn open_in_file_manager(dir_path: &str, config: &Config) -> Result<()> {
-    open_external_program(&config.behavior.file_manager, dir_path)
-}
-
-/// Resolve path or bookmark name to a PathBuf
+/// Resolve a path or bookmark name to a PathBuf
 fn resolve_path_or_bookmark(input: &str, bookmarks: &Bookmarks) -> Result<PathBuf> {
-    // Windows-specific: Handle bare drive letters (e.g., "C:", "E:")
-    // Convert "C:" to "C:\" to navigate to the root of the drive
+    // Windows: Handle bare drive letters (e.g., "C:", "E:")
     #[cfg(windows)]
     {
         if input.len() == 2 && input.chars().nth(1) == Some(':') {
             let drive_letter = input.chars().next().unwrap();
             if drive_letter.is_ascii_alphabetic() {
-                // Convert "C:" to "C:\" to get the root of the drive
                 let root_path = format!("{}\\", input);
                 let path = PathBuf::from(&root_path);
                 if path.exists() {
@@ -88,7 +61,6 @@ fn resolve_path_or_bookmark(input: &str, bookmarks: &Bookmarks) -> Result<PathBu
         }
     }
 
-    // 1. If looks like absolute path or contains path separator → treat as path
     if platform::is_absolute_path(input) || input.contains(std::path::MAIN_SEPARATOR) {
         let path = PathBuf::from(input);
         if !path.exists() {
@@ -97,37 +69,34 @@ fn resolve_path_or_bookmark(input: &str, bookmarks: &Bookmarks) -> Result<PathBu
         return Ok(canonicalize_and_normalize(&path)?);
     }
 
-    // 2. Check if it's a bookmark
     if let Some(bookmark) = bookmarks.get(input) {
         if bookmark.path.exists() {
             return Ok(bookmark.path.clone());
         } else {
             anyhow::bail!(
                 "Bookmark '{}' points to non-existent directory: {}\n\
-                Use 'dt -bm list' to see all bookmarks",
+                Use 'bm -bm list' to see all bookmarks",
                 input,
                 bookmark.path.display()
             );
         }
     }
 
-    // 3. Try as path
     let path = PathBuf::from(input);
     if path.exists() {
         return Ok(canonicalize_and_normalize(&path)?);
     }
 
-    // 4. Neither bookmark nor path found
     anyhow::bail!(
         "Neither bookmark '{}' nor directory '{}' found.\n\
-        Use 'dt -bm list' to see all bookmarks",
+        Use 'bm -bm list' to see all bookmarks",
         input,
         input
     );
 }
 
 fn main() -> Result<()> {
-    // Preprocess arguments: convert -bm to --bm for clap compatibility
+    // Preprocess: convert -bm to --bm for clap compatibility
     let args: Vec<String> = std::env::args()
         .map(|arg| {
             if arg == "-bm" {
@@ -138,44 +107,37 @@ fn main() -> Result<()> {
         })
         .collect();
 
-    // Ensure config file exists (create if missing)
-    let config = Config::load()?;
-
     let args = Args::parse_from(args);
 
-    // Print version
     if args.version {
-        println!("dtree {}", env!("CARGO_PKG_VERSION"));
+        println!("bm {}", env!("CARGO_PKG_VERSION"));
         return Ok(());
     }
 
-    // Print help
     if args.help {
-        let help_lines = ui::get_help_content();
-        for line in help_lines {
+        for line in ui::get_help_content() {
             println!("{}", line);
         }
         return Ok(());
     }
 
-    // Handle bookmark management mode
+    // Bookmark management mode (-bm)
     if args.bookmark_mode {
         let mut bookmarks = Bookmarks::new()?;
 
         if args.args.is_empty() {
-            // Default: list bookmarks
             println!("Bookmarks:");
             if bookmarks.list().is_empty() {
                 println!("  No bookmarks saved yet.");
                 println!("\nUsage:");
-                println!("  dt -bm add <name> [path]    Add a bookmark");
-                println!("  dt -bm remove <name>        Remove a bookmark");
-                println!("  dt -bm list                 List all bookmarks");
+                println!("  bm -bm add <name> [path]    Add a bookmark");
+                println!("  bm -bm remove <name>        Remove a bookmark");
+                println!("  bm -bm list                 List all bookmarks");
             } else {
                 for bookmark in bookmarks.list() {
                     let name = bookmark.name.as_deref().unwrap_or("(unnamed)");
                     println!(
-                        "  {} → {} ({})",
+                        "  {} -> {} ({})",
                         bookmark.key,
                         name,
                         bookmark.path.display()
@@ -185,11 +147,10 @@ fn main() -> Result<()> {
             return Ok(());
         }
 
-        let subcommand = &args.args[0];
-        match subcommand.as_str() {
+        match args.args[0].as_str() {
             "add" => {
                 if args.args.len() < 2 {
-                    anyhow::bail!("Missing bookmark name\nUsage: dt -bm add <name> [path]");
+                    anyhow::bail!("Missing bookmark name\nUsage: bm -bm add <name> [path]");
                 }
                 let name = &args.args[1];
                 let path = if args.args.len() >= 3 {
@@ -204,7 +165,6 @@ fn main() -> Result<()> {
 
                 let mut path = canonicalize_and_normalize(&path)?;
 
-                // Bookmarks must be directories only
                 if path.is_file() {
                     if let Some(parent) = path.parent() {
                         path = parent.to_path_buf();
@@ -220,15 +180,15 @@ fn main() -> Result<()> {
                     .map(|s| s.to_string());
 
                 bookmarks.add(name.clone(), path.clone(), dir_name)?;
-                println!("✓ Bookmark '{}' added: {}", name, path.display());
+                println!("Bookmark '{}' added: {}", name, path.display());
             }
             "remove" => {
                 if args.args.len() < 2 {
-                    anyhow::bail!("Missing bookmark name\nUsage: dt -bm remove <name>");
+                    anyhow::bail!("Missing bookmark name\nUsage: bm -bm remove <name>");
                 }
                 let name = &args.args[1];
                 bookmarks.remove(name)?;
-                println!("✓ Bookmark '{}' removed", name);
+                println!("Bookmark '{}' removed", name);
             }
             "list" => {
                 println!("Bookmarks:");
@@ -238,7 +198,7 @@ fn main() -> Result<()> {
                     for bookmark in bookmarks.list() {
                         let name = bookmark.name.as_deref().unwrap_or("(unnamed)");
                         println!(
-                            "  {} → {} ({})",
+                            "  {} -> {} ({})",
                             bookmark.key,
                             name,
                             bookmark.path.display()
@@ -246,132 +206,42 @@ fn main() -> Result<()> {
                     }
                 }
             }
-            _ => {
+            unknown => {
                 anyhow::bail!(
                     "Unknown bookmark command '{}'\n\n\
                     Available commands:\n\
-                      dt -bm              List all bookmarks\n\
-                      dt -bm add <name> [path]\n\
-                      dt -bm remove <name>\n\
-                      dt -bm list",
-                    subcommand
+                      bm -bm              List all bookmarks\n\
+                      bm -bm add <name> [path]\n\
+                      bm -bm remove <name>\n\
+                      bm -bm list",
+                    unknown
                 );
             }
         }
         return Ok(());
     }
 
-    // If path or bookmark argument provided, resolve and output without entering TUI
+    // If path/bookmark argument provided, resolve and output it
     if !args.args.is_empty() {
-        let input = &args.args[0];
-
-        // Special case: -v flag with path/bookmark
-        if args.view {
-            let bookmarks = Bookmarks::new()?;
-            let start_path = resolve_path_or_bookmark(input, &bookmarks)?;
-
-            if !start_path.is_file() {
-                anyhow::bail!("--view requires a file path, got: {}", start_path.display());
-            }
-
-            // Start app in fullscreen viewer mode
-            let mut terminal = setup_terminal()?;
-            let parent_dir = start_path.parent().unwrap_or(&start_path).to_path_buf();
-            let mut app = App::new(parent_dir)?;
-
-            // Set fullscreen mode and load the file
-            app.set_fullscreen_viewer(&start_path)?;
-
-            let result = run_app(&mut terminal, &mut app);
-            cleanup_terminal()?;
-
-            if let Some(path) = result? {
-                let path_str = path.to_string_lossy();
-                if let Some(file_path) = path_str.strip_prefix("EDITOR:") {
-                    open_in_editor(file_path, &config)?;
-                } else if let Some(file_path) = path_str.strip_prefix("HEXEDITOR:") {
-                    open_in_hex_editor(file_path, &config)?;
-                } else if let Some(dir_path) = path_str.strip_prefix("FILEMGR:") {
-                    open_in_file_manager(dir_path, &config)?;
-                } else {
-                    println!("{}", path.display());
-                }
-            }
-            return Ok(());
-        }
-
-        // Normal case: resolve path/bookmark and output directly (no TUI)
         let bookmarks = Bookmarks::new()?;
-        let resolved_path = resolve_path_or_bookmark(input, &bookmarks)?;
-
-        // Output path for bash wrapper to cd into
-        println!("{}", resolved_path.display());
+        let resolved = resolve_path_or_bookmark(&args.args[0], &bookmarks)?;
+        println!("{}", resolved.display());
         return Ok(());
     }
 
-    // No arguments: launch interactive TUI in compact inline mode (8 rows).
-    // If the user presses 's' to open the file viewer, we seamlessly switch
-    // to fullscreen mode while preserving the navigation state.
+    // No arguments: launch interactive compact TUI
     let start_path = std::env::current_dir()?;
     let mut app = App::new(start_path)?;
-    app.compact_mode = true;
 
-    // --- Compact phase ---
-    let compact_result = {
+    let result = {
         let mut terminal = setup_terminal_compact()?;
         let r = run_app(&mut terminal, &mut app);
-        // Terminal is dropped here (ratatui cleanup); we then erase the drawn area.
         r
     };
     cleanup_terminal_compact()?;
 
-    let compact_path = compact_result?;
-
-    // Check whether the user requested a switch to fullscreen file-viewer mode
-    let switch_to_fullscreen = compact_path
-        .as_ref()
-        .map(|p| p.to_string_lossy().starts_with("SWITCH_FULLSCREEN:"))
-        .unwrap_or(false);
-
-    if switch_to_fullscreen {
-        // --- Fullscreen phase (user pressed 's') ---
-        // app.show_files is already true and the tree has been reloaded by
-        // event_handler; we just disable compact_mode and enter alternate screen.
-        app.compact_mode = false;
-
-        let fullscreen_result = {
-            let mut terminal = setup_terminal()?;
-            run_app(&mut terminal, &mut app)
-        };
-        cleanup_terminal()?;
-
-        if let Some(path) = fullscreen_result? {
-            let path_str = path.to_string_lossy();
-            if let Some(file_path) = path_str.strip_prefix("EDITOR:") {
-                open_in_editor(file_path, &config)?;
-            } else if let Some(file_path) = path_str.strip_prefix("HEXEDITOR:") {
-                open_in_hex_editor(file_path, &config)?;
-            } else if let Some(dir_path) = path_str.strip_prefix("FILEMGR:") {
-                open_in_file_manager(dir_path, &config)?;
-            } else {
-                println!("{}", path.display());
-            }
-        }
-        return Ok(());
-    }
-
-    // Normal compact exit: output the selected path (if any) for the shell wrapper
-    if let Some(path) = compact_path {
-        let path_str = path.to_string_lossy();
-        if let Some(file_path) = path_str.strip_prefix("EDITOR:") {
-            open_in_editor(file_path, &config)?;
-        } else if let Some(file_path) = path_str.strip_prefix("HEXEDITOR:") {
-            open_in_hex_editor(file_path, &config)?;
-        } else if let Some(dir_path) = path_str.strip_prefix("FILEMGR:") {
-            open_in_file_manager(dir_path, &config)?;
-        } else {
-            println!("{}", path.display());
-        }
+    if let Some(path) = result? {
+        println!("{}", path.display());
     }
 
     Ok(())

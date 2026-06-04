@@ -1,0 +1,123 @@
+BM - Bookmark Manager and Directory Navigator
+
+DESCRIPTION
+  bm is a compact inline TUI for directory navigation and bookmark management.
+  It runs in 8 rows without taking over the terminal screen.
+
+  COMPACT MODE (default)
+    • Runs inline in 8 rows — does not take over the terminal screen
+    • Terminal returns to its exact pre-launch state on exit (no artifacts)
+    • Ideal for quick directory navigation without interrupting your workflow
+
+KEYBOARD NAVIGATION
+  ↑ / k          Navigate up in the tree
+  ↓ / j          Navigate down in the tree
+  → / l          Expand directory (show subdirectories)
+  ← / h          Collapse directory (hide subdirectories)
+  u              Go to parent directory (change root)
+  Backspace      Go to parent directory (change root)
+  Enter          Go into directory (change root to selected directory)
+  q              Exit and print selected directory path to stdout
+  Esc            Quit without output
+
+SEARCH
+  /              Enter search mode
+  Type query     Type your search query (case-insensitive)
+  Enter          Execute search and show results inline
+  Esc            Cancel search or close results
+
+  In Search Results:
+  Tab            Switch focus between tree and search results
+  ↑↓ / jk        Navigate through search results
+  Enter          Select result and jump to it in the tree
+
+  Search modes:
+  • Normal search (query):   Case-insensitive substring matching
+                             Example: type 'src' to find directories named 'src'
+
+  • Fuzzy search (/query):   Intelligent fuzzy matching with scoring
+                             Start query with '/' to activate fuzzy mode
+                             Example: type '/srch' to find 'search'
+                             Highlights matching characters in results
+
+BOOKMARKS
+  Interactive mode (inside bm):
+    m            Enter bookmark creation mode
+    '            Open bookmark selection menu (tick/apostrophe)
+
+  Bookmark Creation (after pressing 'm'):
+    • Shows existing bookmarks list while typing
+    • Type bookmark name (multi-character names supported)
+    • Examples: work, project-123, my_home
+    • Ctrl+j/k (or Ctrl+↑↓) scrolls through existing bookmarks list
+    • Enter to save, Esc to cancel
+    • NOTE: Bookmarks save directories only (if cursor on file, saves parent dir)
+
+  Bookmark Selection (after pressing '''):
+    • Shows all saved bookmarks with paths
+    • Two modes: Navigation (default) and Filter
+    • Tab switches between navigation and filter modes
+
+    Navigation mode:
+      ↑↓ / jk     Move selection up/down
+      d           Delete bookmark (press once to mark, twice to confirm)
+      Enter       Jump to selected bookmark
+      Tab         Switch to filter mode
+
+    Filter mode:
+      Type text   Filter bookmarks by name or path
+      Tab         Switch to navigation mode (keeps filter)
+      Enter       Jump to selected bookmark
+      Esc         Close bookmark panel
+
+  Command-line mode (outside bm):
+    bm myproject          Jump to bookmark 'myproject' (if exists)
+    bm -bm                List all bookmarks
+    bm -bm list           List all bookmarks
+    bm -bm add work       Save current directory as 'work'
+    bm -bm add work /path Save specific path as 'work'
+    bm -bm remove work    Remove bookmark 'work'
+
+  Storage:
+    Linux/macOS:  ~/.config/bmrk/bookmarks.json
+    Windows:      %APPDATA%\bmrk\bookmarks.json
+
+DISK SELECTION (press 'd')
+  Opens a list of all available drives/volumes with:
+    • Drive letter or mount point
+    • Filesystem type (NTFS, ext4, ...)
+    • Free space and total space
+
+  Navigation:
+    ↑↓ / jk     Move selection up/down
+    Enter        Navigate to selected disk root
+    Esc          Close disk panel without navigating
+
+MOUSE SUPPORT
+  Click          Select item in tree
+  Double-click   Expand/collapse directory
+  Scroll wheel   Navigate tree
+
+COMMAND LINE OPTIONS
+  bm [PATH]              Open TUI from PATH (default: current directory)
+  bm <bookmark>          Jump to bookmark and print path (no TUI)
+  bm --version           Print version information
+  bm -h / --help         Print this help message
+
+  bm -bm                 List all bookmarks
+  bm -bm list            List all bookmarks
+  bm -bm add <name> [path]   Add a bookmark
+  bm -bm remove <name>       Remove a bookmark
+
+CONFIGURATION
+  bm uses a configuration file located at:
+    Linux/macOS:  ~/.config/bmrk/config.toml
+    Windows:      %APPDATA%\bmrk\config.toml
+
+  On first run, this file is created automatically with default values.
+  You can edit it to customize:
+    • Appearance (theme, colors, max filename length)
+    • Behavior (show hidden files, follow symlinks, mouse scroll speed)
+    • Keybindings (customize keyboard shortcuts)
+
+  To reset to defaults: delete the config file, it will be recreated on next run.

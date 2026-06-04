@@ -183,6 +183,7 @@ impl Navigation {
     }
 
     /// Reload tree with new show_files setting
+    #[allow(dead_code)]
     pub fn reload_tree(&mut self, show_files: bool) -> Result<()> {
         Self::reload_node_recursive(
             &self.root,

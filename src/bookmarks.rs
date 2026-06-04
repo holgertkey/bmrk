@@ -68,7 +68,7 @@ impl Bookmarks {
     pub fn new() -> Result<Self> {
         let config_dir = dirs::config_dir()
             .context("Could not find config directory")?
-            .join("dtree");
+            .join("bmrk");
 
         // Ensure config directory exists
         fs::create_dir_all(&config_dir)?;
@@ -401,6 +401,7 @@ impl Bookmarks {
     }
 
     /// Check if current selection is marked for deletion
+    #[allow(dead_code)]
     pub fn is_marked_for_deletion(&self) -> bool {
         self.pending_deletion_index == Some(self.selected_index)
     }

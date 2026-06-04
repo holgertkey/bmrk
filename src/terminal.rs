@@ -34,6 +34,7 @@ pub fn install_panic_hook() {
     }));
 }
 
+#[allow(dead_code)]
 pub fn setup_terminal() -> Result<Terminal<CrosstermBackend<std::io::Stderr>>> {
     // Install panic hook before any terminal modifications
     install_panic_hook();
@@ -201,44 +202,24 @@ pub fn run_app(
     terminal: &mut Terminal<CrosstermBackend<std::io::Stderr>>,
     app: &mut App,
 ) -> Result<Option<PathBuf>> {
-    // If in fullscreen mode and file loaded with unknown width, reload with correct terminal width
-    if app.is_fullscreen_viewer() {
-        let terminal_size = terminal.size()?;
-        app.reload_fullscreen_file(terminal_size.width)?;
-    }
-
     loop {
-        // Check if terminal needs to be cleared (e.g., after exiting fullscreen mode)
-        if app.should_clear_terminal() {
-            terminal.clear()?;
-        }
-
         // Only render when needed (dirty flag optimization)
         if app.needs_redraw() {
             terminal.draw(|f| app.render(f))?;
             app.clear_dirty();
         }
 
-        // EVENT BATCHING: Wait briefly for events to accumulate before processing
-        // This prevents rendering after each individual event during rapid input (e.g., held key)
-
-        // First, check if any event is available (with 8ms timeout for optimal balance)
-        // 8ms = 125fps, provides responsive UI while still batching rapid inputs
+        // Wait up to 8ms for the first event; on timeout poll async updates and continue
         if !event::poll(std::time::Duration::from_millis(8))? {
-            // No events after 8ms - poll async updates and continue
             let _ = app.poll_search();
-            let _ = app.poll_sizes();
             continue;
         }
 
-        // Event available! Now drain ALL accumulated events before rendering
+        // Drain all accumulated events before next render
         loop {
-            // Non-blocking check for more events
             if event::poll(std::time::Duration::from_millis(0))? {
                 match event::read()? {
                     Event::Key(key) => {
-                        // Handle both Press and Repeat events for smooth scrolling
-                        // Ignore Release events to prevent double-triggering
                         if matches!(key.kind, KeyEventKind::Press | KeyEventKind::Repeat) {
                             match app.handle_key(key)? {
                                 Some(path) if !path.as_os_str().is_empty() => {
@@ -255,15 +236,11 @@ pub fn run_app(
                         let _ = app.handle_mouse(mouse);
                     }
                     Event::Resize(_width, _height) => {
-                        // Terminal was resized - mark for redraw
                         app.mark_dirty();
                     }
-                    _ => {
-                        // Consume all other events (FocusGained, FocusLost, Paste, etc.)
-                    }
+                    _ => {}
                 }
             } else {
-                // No more events available - break inner loop
                 break;
             }
         }
