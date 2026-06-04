@@ -1,22 +1,16 @@
-# dtree Cheat Sheet
+# bmrk Cheat Sheet
 
-Quick reference guide for dtree - Directory Tree Navigator
+Quick reference for `bm` — Bookmark Manager and Directory Navigator.
 
 ---
 
 ## Installation
 
 ```bash
+cargo install bmrk
+# or from source:
 cargo build --release
-cp target/release/dtree ~/bin/
-```
-
-Add to `~/.bashrc`:
-```bash
-dt() {
-  local result=$(command dtree "$@")
-  [ -n "$result" ] && [ -d "$result" ] && cd "$result"
-}
+cp target/release/bm ~/bin/   # Linux/macOS
 ```
 
 ---
@@ -24,185 +18,109 @@ dt() {
 ## Command Line
 
 ```bash
-dt                          # Open tree navigator
-dt /path/to/directory       # Navigate to directory
-dt myproject                # Jump to bookmark
-dt -                        # Return to previous directory
-dt -v file.txt              # View file in fullscreen
-dt -bm list                 # List bookmarks
-dt -bm add name [path]      # Add bookmark
-dt -bm remove name          # Remove bookmark
-dtree --help                # Show help
-dtree --version             # Show version
+bm                          # Open tree navigator (compact, 8 rows)
+bm /path/to/directory       # Open navigator at specific path
+bm myproject                # Jump to bookmark (prints path, no TUI)
+bm -bm                      # List all bookmarks
+bm -bm list                 # List all bookmarks
+bm -bm add name             # Save current directory as 'name'
+bm -bm add name /path       # Save specific path as 'name'
+bm -bm remove name          # Remove bookmark
+bm --help                   # Show help
+bm --version                # Show version
 ```
 
 ---
 
 ## Tree Navigation
 
-| Key             | Action                           |
-|-----------------|----------------------------------|
-| `j` `↓`         | Move down                        |
-| `k` `↑`         | Move up                          |
-| `l` `→`         | Expand directory                 |
-| `h` `←`         | Collapse directory               |
-| `Enter`         | Enter directory (change root)    |
-| `u` `Backspace` | Go to parent directory           |
-| `q`             | Exit and cd to selected directory|
-| `Esc`           | Exit without cd                  |
-
----
-
-## File Viewing
-
-### Split View Mode
-
-| Key      | Action                   |
-|----------|--------------------------|
-| `s`      | Toggle split view on/off |
-| `Ctrl+j` | Scroll down by line      |
-| `Ctrl+k` | Scroll up by line        |
-| `PgDn`   | Scroll down by page      |
-| `PgUp`   | Scroll up by page        |
-| `Home`   | Jump to start of file    |
-| `End`    | Jump to end of file      |
-
-### Fullscreen Mode
-
-| Key                 | Action                      |
-|---------------------|-----------------------------|
-| `v`                 | Enter fullscreen (from tree)|
-| `j` `k` `↓` `↑`     | Scroll by line              |
-| `Ctrl+j` `Ctrl+k`   | Next/previous file          |
-| `PgDn` `PgUp`       | Scroll by page              |
-| `Home`              | HEAD mode (first 10K lines) |
-| `End`               | TAIL mode (last 10K lines)  |
-| `l`                 | Toggle line numbers         |
-| `w`                 | Toggle line wrapping        |
-| `/`                 | Search within file          |
-| `n` `N`             | Next/previous match         |
-| `V`                 | Enter visual selection mode |
-| `q`                 | Back to tree view           |
-| `Esc`               | Exit program                |
-
-### Visual Selection Mode (Fullscreen)
-
-| Key              | Action                        |
-|------------------|-------------------------------|
-| `V`              | Enter visual mode             |
-| `j` `↓`          | Expand selection downward     |
-| `k` `↑`          | Expand selection upward       |
-| `PgDn` `PgUp`    | Jump by page                  |
-| `Home` `End`     | Jump to start/end             |
-| `Mouse Scroll`   | Move cursor (auto-scroll)     |
-| `y`              | Copy selection + exit         |
-| `Esc` / `V`      | Exit without copying          |
+| Key              | Action                              |
+|------------------|-------------------------------------|
+| `j` `↓`          | Move down                           |
+| `k` `↑`          | Move up                             |
+| `l` `→`          | Expand directory                    |
+| `h` `←`          | Collapse directory                  |
+| `Enter`          | Enter directory (change root)       |
+| `u` `Backspace`  | Go to parent directory              |
+| `q`              | Exit and print selected path        |
+| `Esc`            | Exit without output                 |
 
 ---
 
 ## Search
 
-### Tree Search
+| Key         | Action                  |
+|-------------|-------------------------|
+| `/`         | Enter search mode       |
+| Type        | Add to query            |
+| `Backspace` | Delete character        |
+| `Enter`     | Execute search          |
+| `Tab`       | Switch tree ↔ results   |
+| `j` `k`     | Navigate results        |
+| `Enter`     | Jump to result          |
+| `Esc`       | Cancel / close results  |
 
-| Key         | Action                 |
-|-------------|------------------------|
-| `/`         | Enter search mode      |
-| `Type`      | Add to query           |
-| `Backspace` | Delete character       |
-| `Enter`     | Execute search         |
-| `Tab`       | Switch tree ↔ results  |
-| `j` `k`     | Navigate results       |
-| `Enter`     | Jump to result         |
-| `Esc`       | Close search           |
-
-**Fuzzy**: Start with `/` (e.g., `/fuz` finds `fuzzy.rs`)
-
-**Compact mode**: Results replace the tree body inline — no fullscreen switch needed.
-
-**Result cap**: 500 results max; refine broad queries (e.g. single letters) for targeted results.
-
-### File Search (Fullscreen)
-
-| Key     | Action                   |
-|---------|--------------------------|
-| `/`     | Enter search             |
-| `Enter` | Execute → jump to first  |
-| `n`     | Next match               |
-| `N`     | Previous match           |
-| `Esc`   | Clear search             |
+**Fuzzy mode**: prefix query with `/` — e.g., `/srch` finds `search`.
 
 ---
 
 ## Bookmarks
 
-### Interactive Mode
+### Interactive (inside `bm`)
 
-| Key     | Action               |
-|---------|----------------------|
-| `m`     | Create bookmark      |
-| `'`     | Open bookmark menu   |
-| `j` `k` | Navigate list        |
-| `Tab`   | Toggle filter mode   |
-| `d`     | Delete (press twice) |
-| `Enter` | Jump to bookmark     |
-| `Esc`   | Close menu           |
+| Key     | Action                |
+|---------|-----------------------|
+| `m`     | Create bookmark       |
+| `'`     | Open bookmark list    |
+| `j` `k` | Navigate list         |
+| `Tab`   | Toggle filter mode    |
+| `d`     | Delete (press twice)  |
+| `Enter` | Jump to bookmark      |
+| `Esc`   | Close                 |
 
-### CLI Mode
+### CLI
 
 ```bash
-dt -bm                      # List all
-dt -bm add work             # Add current dir
-dt -bm add work /path       # Add specific path
-dt -bm remove work          # Delete
-dt work                     # Jump to bookmark
+bm -bm                      # List all
+bm -bm add work             # Save current dir as 'work'
+bm -bm add work /some/path  # Save specific path
+bm -bm remove work          # Delete bookmark
+bm work                     # Jump to bookmark
 ```
 
 ---
 
-## File Operations
+## Disk Selection
 
-| Key | Action                                        |
-|-----|-----------------------------------------------|
-| `e` | Open in editor (text) or hex editor (binary)  |
-| `o` | Open in file manager                          |
-| `c` | Copy path to clipboard                        |
-
----
-
-## Other
-
-| Key | Action                   |
-|-----|--------------------------|
-| `i` | Toggle help screen       |
-| `z` | Toggle directory info badge (size, counts, permissions, mtime) |
-| `d` | Open disk/drive selection panel (tree mode) |
+| Key     | Action                         |
+|---------|--------------------------------|
+| `d`     | Open disk/drive panel          |
+| `j` `k` | Navigate drives                |
+| `Enter` | Go to selected drive root      |
+| `Esc`   | Close without navigating       |
 
 ---
 
 ## Mouse
 
-| Action           | Effect                        |
-|------------------|-------------------------------|
-| **Click**        | Select item                   |
-| **Double-click** | Expand/collapse               |
-| **Scroll**       | Navigate/scroll               |
-| **Drag divider** | Resize panels                 |
-| **Shift+Drag**   | Select text (fullscreen)      |
-| **Scroll** (V)   | Move cursor in visual mode    |
+| Action           | Effect                  |
+|------------------|-------------------------|
+| **Click**        | Select item             |
+| **Double-click** | Expand/collapse         |
+| **Scroll**       | Navigate tree           |
 
 ---
 
 ## Configuration
 
-File: `~/.config/dtree/config.toml`
+**File location:**
+- Linux/macOS: `~/.config/bmrk/config.toml`
+- Windows: `%APPDATA%\bmrk\config.toml`
 
 ```toml
 [appearance]
-split_position = 50
-show_icons = true
-enable_syntax_highlighting = true
-syntax_theme = "base16-ocean.dark"
-max_name_length = 30        # Truncate long names in the middle (0 = disabled)
+theme = "default"       # default, gruvbox, nord, tokyonight, dracula, obsidian
+max_name_length = 30    # Truncate long names (0 = disabled)
 
 [appearance.colors]
 selected_color = "cyan"
@@ -210,11 +128,15 @@ directory_color = "blue"
 file_color = "white"
 
 [behavior]
-max_file_lines = 10000
-show_hidden = false
-editor = "nvim"
-hex_editor = "hexyl"
-file_manager = "ranger"
+show_hidden = true
+follow_symlinks = true
+mouse_scroll_lines = 3
+
+[keybindings]
+search = ["/"]
+create_bookmark = ["m"]
+select_bookmark = ["'"]
+select_disk = ["d"]
 ```
 
 ---
@@ -222,145 +144,49 @@ file_manager = "ranger"
 ## Common Workflows
 
 ### Quick Navigation
-```bash
-dt                      # Open tree
-# Navigate with j/k, expand with l
-# Press Enter to enter directory
-# Press q to exit and cd
+```
+bm                      → Open navigator
+j/k                     → Move in tree
+l/h                     → Expand/collapse
+q                       → Exit and print path
 ```
 
 ### Search and Jump
-```bash
-dt                      # Open tree
-# Press / to search
-# Type 'src', press Enter
-# Navigate results with j/k
-# Press Enter to jump
+```
+bm                      → Open navigator
+/                       → Enter search mode
+Type 'src' + Enter      → Search
+j/k + Enter             → Jump to result
 ```
 
-### Bookmark Workflow
-```bash
-dt ~/projects/myapp     # Navigate to project
-# Press m, type 'myapp', Enter
-# Press q to exit
-dt myapp                # Instant jump!
+### Create and Use Bookmarks
+```
+bm ~/projects/myapp     → Navigate to project
+m → type 'myapp' → Enter → Save bookmark
+q                       → Exit
+
+bm myapp                → Instant jump next time
 ```
 
-### File Inspection
-```bash
-dt -v /var/log/syslog   # Open log
-# Press End for tail mode
-# Press / to search
-# Type 'error', Enter
-# Press n for next match
+### Switch Drive (Windows)
 ```
-
-### Edit Workflow
-```bash
-dt ~/projects           # Open tree
-# Press s for split view
-# Navigate to file with j/k
-# Press e to open in editor
-```
-
-### Visual Selection (Copy Lines)
-```bash
-dt -v file.txt          # Open file in fullscreen
-# Press V to enter visual mode
-# Press j/k to select lines
-# Or use mouse scroll
-# Press y to copy to clipboard
-# Selection copied!
+bm                      → Open navigator
+d                       → Open disk panel
+j/k                     → Select drive
+Enter                   → Navigate to drive
 ```
 
 ---
 
-## Tips & Tricks
+## Tips
 
-**Speed Navigation**
-- Use bookmarks for frequent locations
-- Use `dt -` to toggle between two directories
-- Double-click to expand/collapse quickly
-
-**Large Files**
-- Use `End` for tail mode on logs
-- Use `Home` to return to head mode
-- Search with `/` to find specific content
-
-**Text Selection**
-- Use `V` for Vim-style line selection
-- Navigate with `j`/`k` or mouse scroll
-- Copy with `y` - no mouse needed!
-- Or use Shift+Mouse for quick text grab
-
-**Binary Files**
-- Automatically detected
-- Press `e` to open in hex editor
-- Configure `hex_editor` in config
-
-**Customization**
-- Edit `~/.config/dtree/config.toml`
-- Choose syntax theme (20+ available)
-- Customize all colors
-- Set preferred editor/file manager
-
-**Performance**
-- Use `z` to see directory info: `[ 5.9M, 12f 3d, drwxr-xr-x, 24.11.2025 11:28 ]`
-- Large directories load incrementally in the background
-- Search runs in background (non-blocking)
+- Bookmark names are matched before directory paths — `bm work` jumps to a bookmark first
+- Filter mode in bookmark selection (`Tab`) supports partial matching
+- Fuzzy search: `/query` — finds non-adjacent matches, e.g., `/prjct` → `my_project`
+- `q` outputs the path to stdout — pipe or capture as needed: `cd $(bm)`
 
 ---
 
-## Troubleshooting
-
-**Command not found**
-```bash
-# Add to ~/.bashrc and reload
-source ~/.bashrc
-```
-
-**Colors not working**
-```bash
-# Check terminal supports 256 colors
-echo $TERM
-# Should be: xterm-256color or similar
-```
-
-**Icons not showing**
-```bash
-# Install Nerd Fonts
-# Or set show_icons = false in config
-```
-
-**Editor won't open**
-```bash
-# Set in config.toml:
-editor = "nano"  # or vim, nvim, etc.
-```
-
----
-
-## Quick Start
-
-```bash
-# 1. Install
-cargo build --release && cp target/release/dtree ~/bin/
-
-# 2. Add wrapper to ~/.bashrc
-dt() { local r=$(dtree "$@"); [ -d "$r" ] && cd "$r"; }
-
-# 3. Reload shell
-source ~/.bashrc
-
-# 4. Use!
-dt                      # Open navigator
-dt ~/projects           # Jump to directory
-dt -bm add myproject    # Save bookmark
-dt myproject            # Jump to bookmark
-```
-
----
-
-**Documentation**: https://github.com/holgertkey/dtree/tree/main/docs
-**License**: MIT
+**Repository**: https://github.com/holgertkey/bmrk  
+**License**: MIT  
 **Built with**: Rust + Ratatui
