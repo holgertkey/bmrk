@@ -238,7 +238,7 @@ impl UI {
             let hints = if bookmarks.is_creating {
                 "  Enter:save  Ctrl+j/k:scroll  Esc:cancel"
             } else {
-                "  hjkl:nav  u:up  m:bmark  ':jump  d:disk  /:search  q:exit"
+                "  hjkl:nav  u:undo  m:bmark  ':jump  d:disk  /:search  q:exit"
             };
             let total = nav.flat_list.len();
             let count_str = if total > 0 {
