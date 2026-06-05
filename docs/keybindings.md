@@ -31,7 +31,8 @@ This is the default mode when you first launch dtree.
 | `l` or `→`         | Expand directory (show children)          |
 | `h` or `←`         | Collapse expanded directory; if already collapsed, move to parent and collapse it |
 | `Enter`            | Change root to selected directory         |
-| `u` or `Backspace` | Go to parent directory (change root)      |
+| `u`                | Go back (undo last navigation)            |
+| `Backspace`        | Go to parent directory (change root)      |
 
 ### View Toggles
 
@@ -427,7 +428,7 @@ quit = ["q", "Esc", "Q"]
 ### Essential Keys
 
 ```
-Navigation:       j/k (down/up)  l (expand)  h (collapse / go to parent)
+Navigation:       j/k (down/up)  l (expand)  h (collapse / go to parent)  u (go back)
 File viewing:     s (toggle)     v (fullscreen)
 Search:           / (search)     m (bookmark)  ' (bookmarks)
 Actions:          e (editor)     o (file mgr)  c (copy)
@@ -472,6 +473,7 @@ If you're familiar with Vim, these mappings feel natural:
 | `j`      | `j`        | Down                                        |
 | `k`      | `k`        | Up                                          |
 | `h`      | `h`        | Left / Collapse or go to parent             |
+| `u`      | `u`        | Go back (undo last navigation)              |
 | `l`      | `l`        | Right/Expand (or line numbers in fullscreen)|
 | `/`      | `/`        | Search                                      |
 | `n`      | `n`        | Next search result                          |

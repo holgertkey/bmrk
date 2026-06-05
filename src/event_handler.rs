@@ -291,7 +291,10 @@ impl EventHandler {
                     nav.go_to_parent(false)?;
                 }
             }
-            KeyCode::Char('u') | KeyCode::Backspace => {
+            KeyCode::Char('u') => {
+                nav.go_back(false)?;
+            }
+            KeyCode::Backspace => {
                 nav.go_to_parent(false)?;
             }
             _ if config.keybindings.is_create_bookmark(key.code) => {

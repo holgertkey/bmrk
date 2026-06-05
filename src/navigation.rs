@@ -12,6 +12,8 @@ pub struct Navigation {
     pub selected: usize,
     pub show_hidden: bool,
     pub follow_symlinks: bool,
+    /// History stack of previously visited root paths for back-navigation (`u`).
+    pub history: Vec<PathBuf>,
     // Performance optimization: HashMap for O(1) path lookup
     path_to_index: HashMap<PathBuf, usize>,
 }
@@ -34,6 +36,7 @@ impl Navigation {
             selected: 0,
             show_hidden,
             follow_symlinks,
+            history: Vec::new(),
             path_to_index: HashMap::new(),
         };
 
@@ -258,6 +261,7 @@ impl Navigation {
             new_root.load_children(show_files, self.show_hidden, self.follow_symlinks)?;
             new_root.is_expanded = true;
 
+            self.push_history(current_path.clone());
             self.root = Rc::new(RefCell::new(new_root));
             self.rebuild_flat_list();
 
@@ -268,6 +272,35 @@ impl Navigation {
         }
 
         Ok(())
+    }
+
+    /// Navigate back to the previous root in history.
+    /// Returns `true` if navigation occurred, `false` if history is empty.
+    pub fn go_back(&mut self, show_files: bool) -> Result<bool> {
+        let Some(prev_path) = self.history.pop() else {
+            return Ok(false);
+        };
+
+        let mut new_root = TreeNode::new(prev_path, 0)?;
+        new_root.load_children(show_files, self.show_hidden, self.follow_symlinks)?;
+        new_root.is_expanded = true;
+
+        if new_root.has_error {
+            return Ok(false);
+        }
+
+        self.root = Rc::new(RefCell::new(new_root));
+        self.rebuild_flat_list();
+        self.selected = 0;
+        Ok(true)
+    }
+
+    /// Push path to history, capping at 50 entries.
+    fn push_history(&mut self, path: PathBuf) {
+        if self.history.len() >= 50 {
+            self.history.remove(0);
+        }
+        self.history.push(path);
     }
 
     /// Navigate to arbitrary directory (for bookmarks)
@@ -297,7 +330,10 @@ impl Navigation {
             return Ok(new_root.error_message);
         }
 
-        // Success - update to new root
+        // Success - record current root in history before switching
+        let current_path = old_root.borrow().path.clone();
+        self.push_history(current_path);
+
         self.root = Rc::new(RefCell::new(new_root));
         self.rebuild_flat_list();
         self.selected = 0;
@@ -432,5 +468,82 @@ impl Navigation {
             let path = node.borrow().path.clone();
             self.path_to_index.insert(path, idx);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    fn make_nav(path: PathBuf) -> Navigation {
+        Navigation::new(path, false, false, false).expect("Navigation::new failed")
+    }
+
+    #[test]
+    fn go_back_round_trips_after_go_to_directory() {
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path().to_path_buf();
+        let child = root.join("child");
+        std::fs::create_dir(&child).unwrap();
+
+        let mut nav = make_nav(root.clone());
+        assert_eq!(nav.history.len(), 0);
+
+        nav.go_to_directory(child.clone(), false).unwrap();
+        assert_eq!(nav.root.borrow().path, child);
+        assert_eq!(nav.history.len(), 1);
+        assert_eq!(nav.history[0], root);
+
+        let went_back = nav.go_back(false).unwrap();
+        assert!(went_back);
+        assert_eq!(nav.root.borrow().path, root);
+        assert_eq!(nav.history.len(), 0);
+    }
+
+    #[test]
+    fn failed_navigation_does_not_push_history() {
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path().to_path_buf();
+        let nonexistent = root.join("does_not_exist");
+
+        let mut nav = make_nav(root.clone());
+        nav.go_to_directory(nonexistent, false).unwrap();
+
+        assert_eq!(nav.root.borrow().path, root, "root must not change");
+        assert_eq!(nav.history.len(), 0, "history must not grow on failed nav");
+    }
+
+    #[test]
+    fn go_back_does_not_push_history() {
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path().to_path_buf();
+        let child = root.join("child");
+        std::fs::create_dir(&child).unwrap();
+
+        let mut nav = make_nav(root.clone());
+        nav.go_to_directory(child.clone(), false).unwrap();
+        assert_eq!(nav.history.len(), 1);
+
+        nav.go_back(false).unwrap();
+        assert_eq!(nav.history.len(), 0, "go_back must not push to history");
+
+        let went_back = nav.go_back(false).unwrap();
+        assert!(!went_back, "go_back on empty history returns false");
+    }
+
+    #[test]
+    fn go_to_parent_pushes_history() {
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path().to_path_buf();
+        let child = root.join("child");
+        std::fs::create_dir(&child).unwrap();
+
+        let mut nav = make_nav(child.clone());
+        assert_eq!(nav.history.len(), 0);
+
+        nav.go_to_parent(false).unwrap();
+        assert_eq!(nav.history.len(), 1);
+        assert_eq!(nav.history[0], child);
     }
 }
