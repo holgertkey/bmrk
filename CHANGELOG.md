@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Tree view header now shows item position counter `(current/total)` in the same style as
+  the path, matching the `Disks (1/5)` pattern in disk selection mode
 - `bm.ps1` — PowerShell wrapper with correct stdout/stderr separation via temp file;
   supports `bm -` (return to previous directory) and passthrough for `--help`, `--version`,
   `-l`, `-a`, `-d`

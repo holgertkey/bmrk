@@ -240,7 +240,15 @@ impl UI {
             } else {
                 "  hjkl:nav  u:up  m:bmark  ':jump  d:disk  /: search  q:exit"
             };
-            let max_path_len = (area.width as usize).saturating_sub(hints.len() + 4).max(8);
+            let total = nav.flat_list.len();
+            let count_str = if total > 0 {
+                format!(" ({}/{})", nav.selected + 1, total)
+            } else {
+                String::new()
+            };
+            let max_path_len = (area.width as usize)
+                .saturating_sub(hints.len() + count_str.len() + 4)
+                .max(8);
             let path_display = if root_path.len() > max_path_len {
                 format!(
                     "...{}",
@@ -254,6 +262,10 @@ impl UI {
                     Span::styled(" v ", Style::default().fg(Color::Green)),
                     Span::styled(
                         path_display,
+                        Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                    ),
+                    Span::styled(
+                        count_str,
                         Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
                     ),
                     Span::styled(hints, Style::default().fg(Color::DarkGray)),
