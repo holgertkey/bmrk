@@ -225,6 +225,25 @@ impl Navigation {
         Ok(())
     }
 
+    /// Move selection to the parent node within the current flat list.
+    /// Returns true if a parent was found, false if already at depth 0.
+    pub fn select_parent_node(&mut self) -> bool {
+        if let Some(node) = self.flat_list.get(self.selected) {
+            let depth = node.borrow().depth;
+            if depth == 0 {
+                return false;
+            }
+            let target_depth = depth - 1;
+            for i in (0..self.selected).rev() {
+                if self.flat_list[i].borrow().depth == target_depth {
+                    self.selected = i;
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
     /// Navigate to parent directory
     pub fn go_to_parent(&mut self, show_files: bool) -> Result<()> {
         let parent_path = {

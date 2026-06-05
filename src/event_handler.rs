@@ -268,11 +268,27 @@ impl EventHandler {
             KeyCode::Char('h') | KeyCode::Left => {
                 if let Some(node) = nav.get_selected_node() {
                     let node_borrowed = node.borrow();
-                    if node_borrowed.is_dir {
-                        let path = node_borrowed.path.clone();
-                        drop(node_borrowed);
+                    let is_expanded_dir = node_borrowed.is_dir && node_borrowed.is_expanded;
+                    let depth = node_borrowed.depth;
+                    let path = node_borrowed.path.clone();
+                    drop(node_borrowed);
+                    if is_expanded_dir {
                         let _ = nav.toggle_node(&path, false)?;
+                    } else if depth == 0 {
+                        nav.go_to_parent(false)?;
+                    } else {
+                        nav.select_parent_node();
+                        if let Some(parent) = nav.get_selected_node() {
+                            let parent_borrowed = parent.borrow();
+                            if parent_borrowed.is_dir && parent_borrowed.is_expanded {
+                                let parent_path = parent_borrowed.path.clone();
+                                drop(parent_borrowed);
+                                let _ = nav.toggle_node(&parent_path, false)?;
+                            }
+                        }
                     }
+                } else {
+                    nav.go_to_parent(false)?;
                 }
             }
             KeyCode::Char('u') | KeyCode::Backspace => {
