@@ -45,7 +45,7 @@ bm -v / --version           # Show version
 | `j` `↓`          | Move down                           |
 | `k` `↑`          | Move up                             |
 | `l` `→`          | Expand directory                    |
-| `h` `←`          | Collapse directory                  |
+| `h` `←`          | Collapse directory; if already collapsed, move to parent (collapsing it) |
 | `Enter`          | Enter directory (change root)       |
 | `u` `Backspace`  | Go to parent directory              |
 | `q`              | Exit and print selected path        |
@@ -153,7 +153,7 @@ select_disk = ["d"]
 ```
 bm                      → Open navigator
 j/k                     → Move in tree
-l/h                     → Expand/collapse
+l/h                     → Expand / collapse or go to parent
 q                       → Exit and print path
 ```
 
