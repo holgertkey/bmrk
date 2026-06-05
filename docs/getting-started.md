@@ -35,9 +35,10 @@ When you launch dtree for the first time:
 j or ↓    Move down
 k or ↑    Move up
 l or →    Expand directory
-h or ←    Collapse directory
+h or ←    Collapse directory; go to parent if already collapsed
 Enter     Change root to selected directory
-u         Go to parent directory
+u         Go back (undo last navigation)
+Backspace Go to parent directory
 ```
 
 ### Viewing Files

@@ -57,7 +57,7 @@ selection panel it marks the selected bookmark for deletion.
 
 Visual directory tree with vim-style navigation.
 
-**Key bindings**: `j`/`k` (up/down), `l`/`h` (expand/collapse), `Enter` (change root), `u` (parent)
+**Key bindings**: `j`/`k` (up/down), `l` (expand), `h` (collapse / go to parent), `Enter` (change root), `u` (go back), `Backspace` (parent)
 
 **Features**:
 - Lazy loading of directory contents
@@ -396,7 +396,6 @@ Intelligent fuzzy matching with scoring:
 
 See [Roadmap](../CLAUDE.md) for planned features:
 
-- Navigation history (back/forward navigation)
 - Advanced filtering (.gitignore support, custom patterns)
 - Pre-defined color themes
 - Performance monitoring and debug mode

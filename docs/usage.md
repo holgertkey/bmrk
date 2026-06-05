@@ -103,8 +103,8 @@ End           Jump to last item
 
 ```
 l or →        Expand directory (show children)
-h or ←        Collapse directory (hide children)
-Enter         Expand deeply OR change root to selected directory
+h or ←        Collapse expanded directory; if already collapsed, move to parent and collapse it
+Enter         Change root to selected directory
 ```
 
 **Tip**: Double-click a directory to toggle expand/collapse.
@@ -113,17 +113,19 @@ Enter         Expand deeply OR change root to selected directory
 
 ```
 Enter         Change root to selected directory
-u             Go to parent directory
-Backspace     Go to parent directory
+u             Go back (undo last navigation — pops history)
+Backspace     Go to parent directory (change root)
 ```
 
-When you press `Enter` on a directory, it becomes the new root of the tree. Use `u` or `Backspace` to go back up.
+When you press `Enter` on a directory, it becomes the new root of the tree.
+- Use `Backspace` to go up one level to the parent directory.
+- Use `u` to undo any previous navigation (Enter, bookmark jump, disk selection, or Backspace). History holds up to 50 entries.
 
 ### Example Navigation Flow
 
 ```bash
 # Start from home
-dt ~
+bm ~
 
 # Navigate to Downloads
 # Press 'j' until Downloads is selected
@@ -131,8 +133,9 @@ dt ~
 # Press 'j' to navigate into it
 # Press 'Enter' to make it the root
 
-# Go back to parent
-# Press 'u'
+# Go back to where you were
+# Press 'u'   (undo — returns to previous root)
+# Or: press Backspace  (go to parent directory)
 ```
 
 ## File Operations

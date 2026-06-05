@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Navigation history (`u` key): each `Enter`, bookmark jump, disk selection, and `Backspace`
+  push the current root to a 50-entry history stack; `u` pops and returns to the previous root
+  (undo last navigation). Failed navigations do not push to history.
+
+### Changed
+- `h` / `←` now follows ranger-style behavior: collapses an expanded directory when on it;
+  if the directory is already collapsed (or cursor is on a file), moves selection to the parent
+  node and collapses it. At the tree root (depth 0) it still navigates up to the parent directory.
+- `u` repurposed from "go to parent" to "go back" (navigation history undo). Use `Backspace`
+  to go to the parent directory as before.
+
 - Tree view header now shows item position counter `(current/total)` in the same style as
   the path, matching the `Disks (1/5)` pattern in disk selection mode
 - `bm.ps1` — PowerShell wrapper with correct stdout/stderr separation via temp file;
