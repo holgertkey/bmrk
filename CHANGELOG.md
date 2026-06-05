@@ -31,6 +31,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `-d / --del <name>` flag to remove a bookmark
 
 ### Fixed
+- `bm -` did not work in `cmd.exe`: `cd /d` inside a parenthesized `if` block expanded
+  `%BMRK_TMP%` at parse time (empty) instead of after `set`; restructured with `goto` so
+  each line is parsed at execution time
 - Mouse (scroll and click) did not work in the disk selection menu (`d`); mouse events now
   route correctly to disk mode — scroll moves the selection, single click highlights a disk,
   double click navigates to it

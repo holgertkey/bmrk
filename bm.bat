@@ -12,21 +12,21 @@ REM   bm -a <name>    - Add bookmark
 REM   bm -d <name>    - Delete bookmark
 
 REM Handle bm - (return to previous directory)
-if "%~1"=="-" (
-    if not defined BMRK_PREV_DIR (
-        echo bm: no previous directory >&2
-        exit /b 1
-    )
-    if not exist "%BMRK_PREV_DIR%" (
-        echo bm: previous directory does not exist >&2
-        exit /b 1
-    )
-    set "BMRK_TMP=%BMRK_PREV_DIR%"
-    set "BMRK_PREV_DIR=%CD%"
-    cd /d "%BMRK_TMP%"
-    set "BMRK_TMP="
-    exit /b 0
+if not "%~1"=="-" goto :not_prev
+if not defined BMRK_PREV_DIR (
+    echo bm: no previous directory >&2
+    exit /b 1
 )
+if not exist "%BMRK_PREV_DIR%" (
+    echo bm: previous directory does not exist >&2
+    exit /b 1
+)
+set "BMRK_TMP=%BMRK_PREV_DIR%"
+set "BMRK_PREV_DIR=%CD%"
+cd /d "%BMRK_TMP%"
+set "BMRK_TMP="
+exit /b 0
+:not_prev
 
 REM Flags that should run bmrk directly without cd
 if "%~1"=="-h"       goto :passthrough
