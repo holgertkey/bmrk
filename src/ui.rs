@@ -47,6 +47,8 @@ pub struct UI {
     pub terminal_width: u16,
     pub terminal_height: u16,
     pub tree_scroll_offset: usize,
+    /// Scroll offset of the disk list, updated each render when disk selection is active.
+    pub disk_scroll_offset: usize,
     pub bottom_panel_height: u16,
 }
 
@@ -67,6 +69,7 @@ impl UI {
             terminal_width: 0,
             terminal_height: 0,
             tree_scroll_offset: 0,
+            disk_scroll_offset: 0,
             bottom_panel_height: 0,
         }
     }
@@ -297,6 +300,7 @@ impl UI {
                     disks.selected_index.saturating_sub(visible / 2)
                 };
                 *state.offset_mut() = offset;
+                self.disk_scroll_offset = offset;
 
                 frame.render_stateful_widget(
                     List::new(items)

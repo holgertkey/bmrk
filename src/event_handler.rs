@@ -322,18 +322,19 @@ impl EventHandler {
         nav: &mut Navigation,
         search: &mut Search,
         bookmarks: &mut Bookmarks,
+        disks: &mut Disks,
         ui: &mut UI,
         config: &Config,
     ) -> Result<()> {
         match mouse.kind {
             MouseEventKind::Down(MouseButton::Left) => {
-                self.handle_mouse_click(mouse, nav, ui, config)?;
+                self.handle_mouse_click(mouse, nav, disks, ui, config)?;
             }
             MouseEventKind::ScrollUp => {
-                self.handle_scroll_up(mouse, nav, search, bookmarks, ui, config)?;
+                self.handle_scroll_up(mouse, nav, search, bookmarks, disks, ui, config)?;
             }
             MouseEventKind::ScrollDown => {
-                self.handle_scroll_down(mouse, nav, search, bookmarks, ui, config)?;
+                self.handle_scroll_down(mouse, nav, search, bookmarks, disks, ui, config)?;
             }
             _ => {}
         }
@@ -344,9 +345,42 @@ impl EventHandler {
         &mut self,
         mouse: MouseEvent,
         nav: &mut Navigation,
+        disks: &mut Disks,
         ui: &UI,
         config: &Config,
     ) -> Result<()> {
+        if disks.is_selecting {
+            if mouse.row >= ui.tree_area_top
+                && mouse.row < ui.tree_area_top + ui.tree_area_height
+            {
+                let clicked_row_visible = mouse.row.saturating_sub(ui.tree_area_top) as usize;
+                let clicked_disk = clicked_row_visible + ui.disk_scroll_offset;
+
+                if clicked_disk < disks.disks.len() {
+                    let now = Instant::now();
+                    let is_double_click = if let Some((last_time, last_idx)) = self.last_click_time
+                    {
+                        clicked_disk == last_idx
+                            && now.duration_since(last_time)
+                                < Duration::from_millis(config.behavior.double_click_timeout_ms)
+                    } else {
+                        false
+                    };
+
+                    if is_double_click {
+                        let path = disks.disks[clicked_disk].mount_point.clone();
+                        disks.exit_selection_mode();
+                        let _ = nav.go_to_directory(path, false);
+                        self.last_click_time = None;
+                    } else {
+                        disks.selected_index = clicked_disk;
+                        self.last_click_time = Some((now, clicked_disk));
+                    }
+                }
+            }
+            return Ok(());
+        }
+
         if mouse.column >= ui.tree_area_start
             && mouse.column < ui.tree_area_end
             && mouse.row >= ui.tree_area_top
@@ -392,9 +426,14 @@ impl EventHandler {
         nav: &mut Navigation,
         search: &mut Search,
         bookmarks: &mut Bookmarks,
+        disks: &mut Disks,
         ui: &UI,
         config: &Config,
     ) -> Result<()> {
+        if disks.is_selecting {
+            disks.move_up();
+            return Ok(());
+        }
         // Bottom panel scrolling (bookmarks/search in non-compact layout)
         if ui.bottom_panel_height > 0 {
             if search.show_results {
@@ -422,9 +461,14 @@ impl EventHandler {
         nav: &mut Navigation,
         search: &mut Search,
         bookmarks: &mut Bookmarks,
+        disks: &mut Disks,
         ui: &UI,
         config: &Config,
     ) -> Result<()> {
+        if disks.is_selecting {
+            disks.move_down();
+            return Ok(());
+        }
         if ui.bottom_panel_height > 0 {
             if search.show_results {
                 search.move_down();

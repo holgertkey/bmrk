@@ -71,6 +71,7 @@ impl App {
             &mut self.nav,
             &mut self.search,
             &mut self.bookmarks,
+            &mut self.disks,
             &mut self.ui,
             &self.config,
         );
