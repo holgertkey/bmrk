@@ -30,7 +30,7 @@ function bm {
     }
 
     # Flags that should run bmrk directly without cd
-    if ($args.Count -ge 1 -and $args[0] -in '-h', '--help', '--version', '-bm', '--bm') {
+    if ($args.Count -ge 1 -and $args[0] -in '-h', '--help', '-v', '--version', '-l', '--list', '-a', '--add', '-d', '--del') {
         & bmrk.exe @args
         return
     }

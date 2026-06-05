@@ -6,8 +6,10 @@ REM Usage:
 REM   bm              - Open interactive TUI
 REM   bm <name|path>  - Navigate to bookmark or directory
 REM   bm -            - Return to previous directory
-REM   bm --version    - Show version
-REM   bm -bm ...      - Bookmark management
+REM   bm -v           - Show version
+REM   bm -l           - List bookmarks
+REM   bm -a <name>    - Add bookmark
+REM   bm -d <name>    - Delete bookmark
 
 REM Handle bm - (return to previous directory)
 if "%~1"=="-" (
@@ -27,11 +29,16 @@ if "%~1"=="-" (
 )
 
 REM Flags that should run bmrk directly without cd
-if "%~1"=="-h"        goto :passthrough
-if "%~1"=="--help"    goto :passthrough
+if "%~1"=="-h"       goto :passthrough
+if "%~1"=="--help"   goto :passthrough
+if "%~1"=="-v"       goto :passthrough
 if "%~1"=="--version" goto :passthrough
-if "%~1"=="-bm"       goto :passthrough
-if "%~1"=="--bm"      goto :passthrough
+if "%~1"=="-l"       goto :passthrough
+if "%~1"=="--list"   goto :passthrough
+if "%~1"=="-a"       goto :passthrough
+if "%~1"=="--add"    goto :passthrough
+if "%~1"=="-d"       goto :passthrough
+if "%~1"=="--del"    goto :passthrough
 
 REM Run bmrk and capture stdout to a temp file.
 REM TUI renders to stderr (visible in terminal); stdout carries the path.

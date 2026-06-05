@@ -30,14 +30,22 @@ struct Args {
     help: bool,
 
     /// Print version information
-    #[arg(long = "version")]
+    #[arg(short = 'v', long = "version")]
     version: bool,
 
-    /// Bookmark management mode (use: -bm, -bm add <name> [path], -bm remove <name>, -bm list)
-    #[arg(long = "bm")]
-    bookmark_mode: bool,
+    /// List all bookmarks
+    #[arg(short = 'l', long = "list")]
+    list: bool,
 
-    /// All positional arguments (path or bookmark commands)
+    /// Add a bookmark with the given name (uses current dir or trailing path arg)
+    #[arg(short = 'a', long = "add", value_name = "NAME")]
+    add: Option<String>,
+
+    /// Delete a bookmark by name
+    #[arg(short = 'd', long = "del", value_name = "NAME")]
+    del: Option<String>,
+
+    /// All positional arguments (path or bookmark name)
     #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
     args: Vec<String>,
 }
@@ -75,7 +83,7 @@ fn resolve_path_or_bookmark(input: &str, bookmarks: &Bookmarks) -> Result<PathBu
         } else {
             anyhow::bail!(
                 "Bookmark '{}' points to non-existent directory: {}\n\
-                Use 'bm -bm list' to see all bookmarks",
+                Use 'bm -l' to see all bookmarks",
                 input,
                 bookmark.path.display()
             );
@@ -89,25 +97,14 @@ fn resolve_path_or_bookmark(input: &str, bookmarks: &Bookmarks) -> Result<PathBu
 
     anyhow::bail!(
         "Neither bookmark '{}' nor directory '{}' found.\n\
-        Use 'bm -bm list' to see all bookmarks",
+        Use 'bm -l' to see all bookmarks",
         input,
         input
     );
 }
 
 fn main() -> Result<()> {
-    // Preprocess: convert -bm to --bm for clap compatibility
-    let args: Vec<String> = std::env::args()
-        .map(|arg| {
-            if arg == "-bm" {
-                "--bm".to_string()
-            } else {
-                arg
-            }
-        })
-        .collect();
-
-    let args = Args::parse_from(args);
+    let args = Args::parse();
 
     if args.version {
         println!("bmrk {}", env!("CARGO_PKG_VERSION"));
@@ -121,103 +118,66 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
-    // Bookmark management mode (-bm)
-    if args.bookmark_mode {
-        let mut bookmarks = Bookmarks::new()?;
-
-        if args.args.is_empty() {
-            println!("Bookmarks:");
-            if bookmarks.list().is_empty() {
-                println!("  No bookmarks saved yet.");
-                println!("\nUsage:");
-                println!("  bm -bm add <name> [path]    Add a bookmark");
-                println!("  bm -bm remove <name>        Remove a bookmark");
-                println!("  bm -bm list                 List all bookmarks");
-            } else {
-                for bookmark in bookmarks.list() {
-                    let name = bookmark.name.as_deref().unwrap_or("(unnamed)");
-                    println!(
-                        "  {} -> {} ({})",
-                        bookmark.key,
-                        name,
-                        bookmark.path.display()
-                    );
-                }
-            }
-            return Ok(());
-        }
-
-        match args.args[0].as_str() {
-            "add" => {
-                if args.args.len() < 2 {
-                    anyhow::bail!("Missing bookmark name\nUsage: bm -bm add <name> [path]");
-                }
-                let name = &args.args[1];
-                let path = if args.args.len() >= 3 {
-                    PathBuf::from(&args.args[2])
-                } else {
-                    std::env::current_dir()?
-                };
-
-                if !path.exists() {
-                    anyhow::bail!("Path does not exist: {}", path.display());
-                }
-
-                let mut path = canonicalize_and_normalize(&path)?;
-
-                if path.is_file() {
-                    if let Some(parent) = path.parent() {
-                        path = parent.to_path_buf();
-                        eprintln!("Note: File provided, using parent directory instead");
-                    } else {
-                        anyhow::bail!("Cannot determine parent directory");
-                    }
-                }
-
-                let dir_name = path
-                    .file_name()
-                    .and_then(|n| n.to_str())
-                    .map(|s| s.to_string());
-
-                bookmarks.add(name.clone(), path.clone(), dir_name)?;
-                println!("Bookmark '{}' added: {}", name, path.display());
-            }
-            "remove" => {
-                if args.args.len() < 2 {
-                    anyhow::bail!("Missing bookmark name\nUsage: bm -bm remove <name>");
-                }
-                let name = &args.args[1];
-                bookmarks.remove(name)?;
-                println!("Bookmark '{}' removed", name);
-            }
-            "list" => {
-                println!("Bookmarks:");
-                if bookmarks.list().is_empty() {
-                    println!("  No bookmarks saved yet.");
-                } else {
-                    for bookmark in bookmarks.list() {
-                        let name = bookmark.name.as_deref().unwrap_or("(unnamed)");
-                        println!(
-                            "  {} -> {} ({})",
-                            bookmark.key,
-                            name,
-                            bookmark.path.display()
-                        );
-                    }
-                }
-            }
-            unknown => {
-                anyhow::bail!(
-                    "Unknown bookmark command '{}'\n\n\
-                    Available commands:\n\
-                      bm -bm              List all bookmarks\n\
-                      bm -bm add <name> [path]\n\
-                      bm -bm remove <name>\n\
-                      bm -bm list",
-                    unknown
+    if args.list {
+        let bookmarks = Bookmarks::new()?;
+        println!("Bookmarks:");
+        if bookmarks.list().is_empty() {
+            println!("  No bookmarks saved yet.");
+            println!("\nUsage:");
+            println!("  bm -a <name> [path]    Add a bookmark");
+            println!("  bm -d <name>           Remove a bookmark");
+            println!("  bm -l                  List all bookmarks");
+        } else {
+            for bookmark in bookmarks.list() {
+                let name = bookmark.name.as_deref().unwrap_or("(unnamed)");
+                println!(
+                    "  {} -> {} ({})",
+                    bookmark.key,
+                    name,
+                    bookmark.path.display()
                 );
             }
         }
+        return Ok(());
+    }
+
+    if let Some(name) = args.add {
+        let mut bookmarks = Bookmarks::new()?;
+        let path = if !args.args.is_empty() {
+            PathBuf::from(&args.args[0])
+        } else {
+            std::env::current_dir()?
+        };
+
+        if !path.exists() {
+            anyhow::bail!("Path does not exist: {}", path.display());
+        }
+
+        let mut path = canonicalize_and_normalize(&path)?;
+
+        if path.is_file() {
+            if let Some(parent) = path.parent() {
+                path = parent.to_path_buf();
+                eprintln!("Note: File provided, using parent directory instead");
+            } else {
+                anyhow::bail!("Cannot determine parent directory");
+            }
+        }
+
+        let dir_name = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .map(|s| s.to_string());
+
+        bookmarks.add(name.clone(), path.clone(), dir_name)?;
+        println!("Bookmark '{}' added: {}", name, path.display());
+        return Ok(());
+    }
+
+    if let Some(name) = args.del {
+        let mut bookmarks = Bookmarks::new()?;
+        bookmarks.remove(&name)?;
+        println!("Bookmark '{}' removed", name);
         return Ok(());
     }
 
