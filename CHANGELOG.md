@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Mouse (scroll and click) did not work in the disk selection menu (`d`); mouse events now
   route correctly to disk mode — scroll moves the selection, single click highlights a disk,
   double click navigates to it
+- `q` in disk selection mode was ignored; now exits the TUI and changes the shell to the
+  selected disk's root (consistent with `q` behaviour in the main tree)
 - `bm.bat`: directory navigation (`bm myproject`, `bm some\path`) was silently doing nothing
   due to `cd` running in a subprocess when called from PowerShell; resolved by providing the
   dedicated `bm.ps1` PowerShell wrapper instead

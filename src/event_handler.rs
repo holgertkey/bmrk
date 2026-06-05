@@ -64,6 +64,12 @@ impl EventHandler {
                     }
                     return Ok(Some(PathBuf::new()));
                 }
+                KeyCode::Char('q') | KeyCode::Char('Q') => {
+                    if let Some(disk) = disks.get_selected() {
+                        return Ok(Some(disk.mount_point.clone()));
+                    }
+                    return Ok(None);
+                }
                 KeyCode::Char('j') | KeyCode::Down => {
                     disks.move_down();
                     return Ok(Some(PathBuf::new()));
