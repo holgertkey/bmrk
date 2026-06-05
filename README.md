@@ -107,7 +107,7 @@ The wrapper is required for `cd` to work. Choose your shell below.
            } else { Write-Error 'bm: no previous directory' }
            return
        }
-       if ($args.Count -ge 1 -and $args[0] -in '-h','--help','--version','-bm','--bm') {
+       if ($args.Count -ge 1 -and $args[0] -in '-h','--help','-v','--version','-l','--list','-a','--add','-d','--del') {
            & bmrk.exe @args; return
        }
        $t = [IO.Path]::GetTempFileName()
@@ -215,13 +215,12 @@ bm myproject                # Jump to bookmark (cd directly, no TUI)
 bm -                        # Return to previous directory
 
 # Bookmark management
-bm -bm                      # List all bookmarks
-bm -bm list                 # List all bookmarks
-bm -bm add work             # Save current directory as 'work'
-bm -bm add work /some/path  # Save specific path as 'work'
-bm -bm remove work          # Remove bookmark 'work'
+bm -l                       # List all bookmarks
+bm -a work                  # Save current directory as 'work'
+bm -a work /some/path       # Save specific path as 'work'
+bm -d work                  # Remove bookmark 'work'
 
-bm --version                # Print version
+bm -v / --version           # Print version
 bm -h / --help              # Print help
 ```
 
@@ -286,10 +285,11 @@ select_disk = ["d"]
 | `bm` (TUI → `q`)      | `/selected/path`           | `cd` there            |
 | `bm myproject`        | `/bookmarked/path`         | `cd` there            |
 | `bm -`                | _(no bmrk call)_           | `cd` to previous dir  |
-| `bm -bm`              | `Bookmarks: …` (text)      | Print it (passthrough)|
-| `bm -bm add work`     | `Bookmark 'work' added: …` | Print it (passthrough)|
+| `bm -l`               | `Bookmarks: …` (text)      | Print it (passthrough)|
+| `bm -a work`          | `Bookmark 'work' added: …` | Print it (passthrough)|
+| `bm -d work`          | `Bookmark 'work' removed`  | Print it (passthrough)|
 | `bm --help`           | Help text                  | Print it (passthrough)|
-| `bm --version`        | `bmrk 0.1.0`               | Print it (passthrough)|
+| `bm -v`               | `bmrk 0.1.0`               | Print it (passthrough)|
 | `bm` (TUI → Esc)      | _(empty)_                  | Do nothing            |
 
 ---

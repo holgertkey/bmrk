@@ -75,11 +75,10 @@ BOOKMARKS
 
   Command-line mode (outside bm):
     bm myproject          Jump to bookmark 'myproject' (if exists)
-    bm -bm                List all bookmarks
-    bm -bm list           List all bookmarks
-    bm -bm add work       Save current directory as 'work'
-    bm -bm add work /path Save specific path as 'work'
-    bm -bm remove work    Remove bookmark 'work'
+    bm -l                 List all bookmarks
+    bm -a work            Save current directory as 'work'
+    bm -a work /path      Save specific path as 'work'
+    bm -d work            Remove bookmark 'work'
 
   Storage:
     Linux/macOS:  ~/.config/bmrk/bookmarks.json
@@ -104,13 +103,12 @@ MOUSE SUPPORT
 COMMAND LINE OPTIONS
   bm [PATH]              Open TUI from PATH (default: current directory)
   bm <bookmark>          Jump to bookmark and print path (no TUI)
-  bm --version           Print version information
+  bm -v / --version      Print version information
   bm -h / --help         Print this help message
 
-  bm -bm                 List all bookmarks
-  bm -bm list            List all bookmarks
-  bm -bm add <name> [path]   Add a bookmark
-  bm -bm remove <name>       Remove a bookmark
+  bm -l / --list         List all bookmarks
+  bm -a / --add <name> [path]   Add a bookmark
+  bm -d / --del <name>          Remove a bookmark
 
 CONFIGURATION
   bm uses a configuration file located at:

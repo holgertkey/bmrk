@@ -28,13 +28,12 @@ See README.md for detailed installation instructions.
 bm                          # Open tree navigator (compact, 8 rows)
 bm /path/to/directory       # Open navigator at specific path
 bm myproject                # Jump to bookmark (prints path, no TUI)
-bm -bm                      # List all bookmarks
-bm -bm list                 # List all bookmarks
-bm -bm add name             # Save current directory as 'name'
-bm -bm add name /path       # Save specific path as 'name'
-bm -bm remove name          # Remove bookmark
-bm --help                   # Show help
-bm --version                # Show version
+bm -l                       # List all bookmarks
+bm -a name                  # Save current directory as 'name'
+bm -a name /path            # Save specific path as 'name'
+bm -d name                  # Remove bookmark
+bm -h / --help              # Show help
+bm -v / --version           # Show version
 ```
 
 ---
@@ -88,10 +87,10 @@ bm --version                # Show version
 ### CLI
 
 ```bash
-bm -bm                      # List all
-bm -bm add work             # Save current dir as 'work'
-bm -bm add work /some/path  # Save specific path
-bm -bm remove work          # Delete bookmark
+bm -l                       # List all
+bm -a work                  # Save current dir as 'work'
+bm -a work /some/path       # Save specific path
+bm -d work                  # Delete bookmark
 bm work                     # Jump to bookmark
 ```
 

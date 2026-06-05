@@ -24,13 +24,13 @@ terminal returns to its exact state on exit.
 
 Save favorite directories and jump to them instantly from anywhere on the command line.
 
-**Key bindings**: `m` (create), `'` (select menu), `dt myproject` (CLI jump)
+**Key bindings**: `m` (create), `'` (select menu), `bm myproject` (CLI jump)
 
 **Features**:
 - Multi-character names (e.g., `webapp-backend`)
 - Interactive creation with visual feedback and existing bookmarks list
 - Dual-mode selection (navigation + filter — Tab to switch)
-- CLI management (`dt -bm add/remove/list`)
+- CLI management (`bm -l`, `bm -a <name>`, `bm -d <name>`)
 - Direct navigation from command line — no TUI required
 - Persistent storage in JSON
 - Safe two-phase deletion
@@ -103,13 +103,13 @@ Fast, asynchronous search across the entire tree.
 
 Save and quickly jump to favorite directories.
 
-**Key bindings**: `m` (create), `'` (select), `dt myproject` (CLI jump)
+**Key bindings**: `m` (create), `'` (select), `bm myproject` (CLI jump)
 
 **Features**:
 - Multi-character names (e.g., `webapp-backend`)
 - Interactive creation with visual feedback
 - Dual-mode selection (navigation + filter)
-- CLI management (`dt -bm add/remove/list`)
+- CLI management (`bm -l`, `bm -a <name>`, `bm -d <name>`)
 - Direct navigation from command line
 - Persistent storage in JSON
 - Safe two-phase deletion
@@ -244,7 +244,7 @@ Seamless shell workflow integration.
 - `dt` wrapper function for automatic cd
 - Direct navigation: `dt /path` or `dt bookmark`
 - Return to previous directory: `dt -`
-- Bookmark management from CLI: `dt -bm`
+- Bookmark management from CLI: `bm -l`, `bm -a`, `bm -d`
 - Clean separation of TUI (stderr) and output (stdout)
 
 [Learn more →](./bash-integration.md)

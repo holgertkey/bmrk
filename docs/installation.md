@@ -61,7 +61,7 @@ This is the same approach used by `fzf`, `zoxide`, and `autojump`.
            } else { Write-Error 'bm: no previous directory' }
            return
        }
-       if ($args.Count -ge 1 -and $args[0] -in '-h','--help','--version','-bm','--bm') {
+       if ($args.Count -ge 1 -and $args[0] -in '-h','--help','-v','--version','-l','--list','-a','--add','-d','--del') {
            & bmrk.exe @args; return
        }
        $t = [IO.Path]::GetTempFileName()
@@ -180,8 +180,8 @@ Same as bash, but edit `~/.zshrc` instead of `~/.bashrc`.
 After installation, verify everything works:
 
 ```bash
-bm --version        # Should print: bmrk x.y.z
-bm -bm              # Should list bookmarks (empty on first run)
+bm -v               # Should print: bmrk x.y.z
+bm -l               # Should list bookmarks (empty on first run)
 bm                  # Should open the interactive TUI
 ```
 

@@ -75,27 +75,25 @@ dtree --view src/main.rs
 
 ```bash
 # List all bookmarks
-dtree -bm
-dtree -bm list
-dt -bm
-dt -bm list
+bm -l
+bm --list
 
 # Add bookmark for current directory
-dtree -bm add NAME
-dt -bm add NAME
+bm -a NAME
+bm --add NAME
 
 # Add bookmark for specific path
-dtree -bm add NAME PATH
-dt -bm add NAME PATH
+bm -a NAME PATH
+bm --add NAME PATH
 
 # Remove bookmark
-dtree -bm remove NAME
-dt -bm remove NAME
+bm -d NAME
+bm --del NAME
 
 # Examples
-dt -bm add work
-dt -bm add myproject ~/projects/my-project
-dt -bm remove work
+bm -a work
+bm -a myproject ~/projects/my-project
+bm -d work
 ```
 
 **Bookmark Names**:
@@ -159,20 +157,32 @@ dtree --version
 
 Output format: `dtree X.Y.Z`
 
-### `-bm, --bm [SUBCOMMAND]`
+### `-l, --list`
 
-Bookmark management mode.
-
-**Subcommands**:
-- `list` - List all bookmarks (default if no subcommand)
-- `add NAME [PATH]` - Add bookmark
-- `remove NAME` - Remove bookmark
+List all saved bookmarks.
 
 ```bash
-dtree -bm list
-dtree -bm add myproject
-dtree -bm add myproject /path/to/project
-dtree -bm remove myproject
+bm -l
+bm --list
+```
+
+### `-a, --add NAME [PATH]`
+
+Add a bookmark. Uses current directory if PATH is omitted.
+
+```bash
+bm -a myproject
+bm -a myproject /path/to/project
+bm --add work
+```
+
+### `-d, --del NAME`
+
+Remove a bookmark by name.
+
+```bash
+bm -d myproject
+bm --del work
 ```
 
 ### `[PATH|BOOKMARK]`
@@ -231,7 +241,7 @@ dt                          # Open dtree
 dt work
 
 # Or use CLI
-dt -bm add work
+bm -a work
 dt work
 ```
 
@@ -254,9 +264,9 @@ dt -v /var/log/nginx/access.log
 **Example 1: Quick Project Navigation**
 ```bash
 # Save project locations
-dt -bm add frontend ~/projects/app-frontend
-dt -bm add backend ~/projects/app-backend
-dt -bm add docs ~/projects/documentation
+bm -a frontend ~/projects/app-frontend
+bm -a backend ~/projects/app-backend
+bm -a docs ~/projects/documentation
 
 # Jump between projects
 dt frontend
@@ -414,7 +424,7 @@ dt -v $(ls -t /var/log/*.log | head -1)
 
 # Add multiple bookmarks from list
 while read -r name path; do
-  dt -bm add "$name" "$path"
+  bm -a "$name" "$path"
 done < bookmarks.txt
 ```
 
@@ -473,10 +483,10 @@ Error: bookmark 'myproject' not found and path does not exist
 **Solution**:
 ```bash
 # List existing bookmarks
-dt -bm list
+bm -l
 
 # Create bookmark if needed
-dt -bm add myproject /path/to/project
+bm -a myproject /path/to/project
 ```
 
 ### Permission Denied
@@ -533,9 +543,9 @@ dt -                            # Previous directory
 dt -v FILE                      # View file
 
 # Bookmarks
-dt -bm                          # List bookmarks
-dt -bm add NAME [PATH]          # Add bookmark
-dt -bm remove NAME              # Remove bookmark
+bm -l                           # List bookmarks
+bm -a NAME [PATH]               # Add bookmark
+bm -d NAME                      # Remove bookmark
 
 # Help
 dtree -h                        # Show help

@@ -297,17 +297,16 @@ Enter         Jump to selected bookmark
 
 ```bash
 # Jump to bookmark
-dt myproject
+bm myproject
 
 # List bookmarks
-dt -bm
-dt -bm list
+bm -l
 
 # Add bookmark
-dt -bm add work /path/to/work
+bm -a work /path/to/work
 
 # Remove bookmark
-dt -bm remove work
+bm -d work
 ```
 
 ## Directory Sizes

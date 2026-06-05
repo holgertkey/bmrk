@@ -9,8 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - `bm.ps1` — PowerShell wrapper with correct stdout/stderr separation via temp file;
-  supports `bm -` (return to previous directory) and passthrough for `--help`, `--version`, `-bm`
+  supports `bm -` (return to previous directory) and passthrough for `--help`, `--version`,
+  `-l`, `-a`, `-d`
 - `bm -` navigation in `bm.bat` (CMD wrapper) via `BMRK_PREV_DIR` environment variable
+- `-v` short flag as alias for `--version`
+- `-l / --list` flag to list all bookmarks
+- `-a / --add <name> [path]` flag to add a bookmark
+- `-d / --del <name>` flag to remove a bookmark
 
 ### Fixed
 - `bm.bat`: directory navigation (`bm myproject`, `bm some\path`) was silently doing nothing
@@ -18,8 +23,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   dedicated `bm.ps1` PowerShell wrapper instead
 
 ### Changed
+- `-bm` / `--bm` subcommand replaced with dedicated flags (`-l`, `-a`, `-d`); bookmark
+  management commands are now first-class flags instead of positional sub-arguments
 - `bm.bat` rewritten: added passthrough handling for flags that should not trigger `cd`
-  (`-h`, `--help`, `--version`, `-bm`, `--bm`), proper exit-code propagation, and `bm -` support
+  (`-h`, `--help`, `-v`, `--version`, `-l`, `--list`, `-a`, `--add`, `-d`, `--del`),
+  proper exit-code propagation, and `bm -` support
 - `docs/installation.md` rewritten for bmrk (previously contained dtree content)
 - README: Windows PowerShell installation instructions updated to use `bm.ps1`
 
@@ -35,7 +43,7 @@ and stripped down to a focused bookmark manager and directory navigator.
 - Two-phase search with fuzzy mode (`/query`)
 - Disk/drive selection panel (`d`)
 - Mouse support: click, double-click, scroll
-- CLI bookmark commands: `bm -bm add/remove/list`
+- CLI bookmark commands: `bm -l`, `bm -a <name>`, `bm -d <name>`
 - Direct path/bookmark resolution: `bm myproject`
 - TOML configuration with theme presets and custom colors
 

@@ -562,7 +562,7 @@ Without this comprehensive cleanup, terminal artifacts appear especially after:
 main() -> Result<()>
   → Config::load()?                   // Can return error
   → Args::parse_from()
-  → [Handle --version, --help, -bm]   // Early returns
+  → [Handle -v, -h, -l, -a, -d]       // Early returns
   → [Resolve path/bookmark if provided] // Can return error via bail!
   → setup_terminal()?
       → install_panic_hook()          // Ensure cleanup on panic

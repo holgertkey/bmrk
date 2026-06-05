@@ -46,7 +46,7 @@ Two-phase search: quick local + deep background. Normal (`/query`) and fuzzy (`/
 
 ## Bookmarks
 
-Create bookmarks with `m`, manage with CLI (`dt -bm`), jump instantly with `dt bookmarkname`.
+Create bookmarks with `m`, manage with CLI (`bm -l`, `bm -a`, `bm -d`), jump instantly with `bm bookmarkname`.
 
 ![Bookmarks Demo](assets/bookmarks.gif)
 
@@ -88,7 +88,7 @@ Create bookmarks with `m`, manage with CLI (`dt -bm`), jump instantly with `dt b
 ### Bookmarks
 - ✅ Create bookmarks (m key)
 - ✅ Browse bookmarks (' key)
-- ✅ CLI management (dt -bm)
+- ✅ CLI management (bm -l / -a / -d)
 - ✅ Quick navigation
 - ✅ Filter mode
 

@@ -495,8 +495,8 @@ chmod +x ~/bin/dtree
 
 2. Update bookmark:
    ```bash
-   dt -bm remove oldname
-   dt -bm add newname /new/path
+   bm -d oldname
+   bm -a newname /new/path
    ```
 
 ### "Editor not found"
