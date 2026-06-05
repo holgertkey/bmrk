@@ -81,7 +81,7 @@ fn default_double_click_timeout() -> u64 {
     500
 }
 fn default_mouse_scroll_lines() -> usize {
-    3
+    1
 }
 
 /// Keybindings configuration
@@ -334,7 +334,7 @@ follow_symlinks = true
 double_click_timeout_ms = 500
 
 # Number of lines to scroll with mouse wheel
-mouse_scroll_lines = 3
+mouse_scroll_lines = 1
 
 [keybindings]
 # Key bindings (each can have multiple keys)

@@ -1,7 +1,7 @@
 use anyhow::Result;
 use crossterm::{
     cursor::MoveTo,
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyEventKind},
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyEventKind, MouseEvent, MouseEventKind},
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
@@ -215,7 +215,12 @@ pub fn run_app(
             continue;
         }
 
-        // Drain all accumulated events before next render
+        // Drain all accumulated events before next render.
+        // Scroll events are coalesced: only the last scroll event per direction
+        // is applied, preventing jumpy navigation when the OS buffers multiple
+        // wheel ticks before the next render frame.
+        let mut scroll_up_event: Option<MouseEvent> = None;
+        let mut scroll_down_event: Option<MouseEvent> = None;
         loop {
             if event::poll(std::time::Duration::from_millis(0))? {
                 match event::read()? {
@@ -232,9 +237,13 @@ pub fn run_app(
                             }
                         }
                     }
-                    Event::Mouse(mouse) => {
-                        let _ = app.handle_mouse(mouse);
-                    }
+                    Event::Mouse(mouse) => match mouse.kind {
+                        MouseEventKind::ScrollUp => scroll_up_event = Some(mouse),
+                        MouseEventKind::ScrollDown => scroll_down_event = Some(mouse),
+                        _ => {
+                            let _ = app.handle_mouse(mouse);
+                        }
+                    },
                     Event::Resize(_width, _height) => {
                         app.mark_dirty();
                     }
@@ -243,6 +252,12 @@ pub fn run_app(
             } else {
                 break;
             }
+        }
+        if let Some(mouse) = scroll_up_event {
+            let _ = app.handle_mouse(mouse);
+        }
+        if let Some(mouse) = scroll_down_event {
+            let _ = app.handle_mouse(mouse);
         }
     }
 }

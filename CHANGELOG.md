@@ -21,6 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `bm.bat`: directory navigation (`bm myproject`, `bm some\path`) was silently doing nothing
   due to `cd` running in a subprocess when called from PowerShell; resolved by providing the
   dedicated `bm.ps1` PowerShell wrapper instead
+- Mouse wheel scrolling jumped multiple entries per tick instead of scrolling sequentially;
+  fixed by coalescing buffered scroll events in the event drain loop so at most one scroll
+  step is applied per render frame
 
 ### Changed
 - `-bm` / `--bm` subcommand replaced with dedicated flags (`-l`, `-a`, `-d`); bookmark
