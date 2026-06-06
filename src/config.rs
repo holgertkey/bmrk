@@ -18,6 +18,10 @@ pub struct AppearanceConfig {
     #[serde(default = "default_max_name_length")]
     pub max_name_length: usize,
 
+    /// Icon set for the tree: "unicode" (▼/▶) or "ascii" (v/>)
+    #[serde(default = "default_icons")]
+    pub icons: String,
+
     /// Custom theme colors
     #[serde(default)]
     pub colors: ThemeConfig,
@@ -28,6 +32,7 @@ impl Default for AppearanceConfig {
         Self {
             theme: default_theme(),
             max_name_length: default_max_name_length(),
+            icons: default_icons(),
             colors: ThemeConfig::default(),
         }
     }
@@ -38,6 +43,9 @@ fn default_theme() -> String {
 }
 fn default_max_name_length() -> usize {
     30
+}
+fn default_icons() -> String {
+    "unicode".to_string()
 }
 
 /// Behavior configuration
@@ -304,6 +312,11 @@ theme = "default"
 # Example: "very_long_project_name.rs" -> "very_long_pro...ame.rs"
 # Set to 0 to disable truncation
 max_name_length = 30
+
+# Icon set used for the directory tree
+# "unicode" - filled triangles: ▼ (expanded)  ▶ (collapsed)
+# "ascii"   - plain characters: v (expanded)  > (collapsed)
+icons = "unicode"
 
 # Custom theme colors (override preset theme)
 [appearance.colors]

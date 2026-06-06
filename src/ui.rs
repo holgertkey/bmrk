@@ -530,11 +530,14 @@ impl UI {
                 .map(|node| {
                     let n = node.borrow();
                     let indent = "  ".repeat(n.depth);
+                    let unicode_icons = config.appearance.icons != "ascii";
                     let icon = if n.is_dir {
                         if n.is_expanded {
-                            "v "
+                            if unicode_icons { "▼ " } else { "v " }
                         } else if n.has_children == Some(false) {
                             "  "
+                        } else if unicode_icons {
+                            "▶ "
                         } else {
                             "> "
                         }

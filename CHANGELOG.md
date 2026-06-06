@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `icons` setting in `[appearance]` config: `"unicode"` (default, `▼`/`▶`) or `"ascii"` (`v`/`>`).
+
 ### Changed
 - Leaf directories (no visible children) no longer show the `>` expand arrow and cannot be expanded.
 
