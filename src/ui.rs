@@ -247,9 +247,9 @@ impl UI {
             );
         } else if search.show_results && search.focus_on_results {
             let hints = if search.is_searching {
-                "  jk:select  Enter:jump  Esc:cancel"
+                "  jk:select  Enter:jump  q:exit  Esc:cancel"
             } else {
-                "  jk:select  Enter:jump  Esc:close"
+                "  jk:select  Enter:jump  q:exit  Esc:close"
             };
             let label = if search.is_searching {
                 format!(

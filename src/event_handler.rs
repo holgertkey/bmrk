@@ -207,6 +207,22 @@ impl EventHandler {
             }
         }
 
+        // q — exit with selected search result when focused on results
+        if matches!(key.code, KeyCode::Char('q') | KeyCode::Char('Q'))
+            && search.focus_on_results
+            && search.show_results
+        {
+            if let Some(result) = search.results.get(search.selected) {
+                let path = result.path.clone();
+                if result.is_dir {
+                    return Ok(Some(path));
+                } else if let Some(parent) = path.parent() {
+                    return Ok(Some(parent.to_path_buf()));
+                }
+            }
+            return Ok(None);
+        }
+
         // q — exit, output path of selected directory for shell
         if matches!(key.code, KeyCode::Char('q') | KeyCode::Char('Q')) {
             if let Some(node) = nav.get_selected_node() {
