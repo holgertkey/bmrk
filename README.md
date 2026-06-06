@@ -11,7 +11,7 @@
 ## What is bmrk?
 
 **bmrk** is a compact inline TUI that fits in 8 rows and never takes over your terminal screen.
-Navigate directories, manage bookmarks, search for files — all from the keyboard.
+Navigate directories, manage bookmarks, search for folders — all from the keyboard.
 
 The binary is `bmrk`. The shell wrapper `bm` wraps it and handles `cd` automatically — because a
 process cannot change its parent shell's directory, a thin wrapper is required (the same approach

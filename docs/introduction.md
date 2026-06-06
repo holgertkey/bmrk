@@ -1,56 +1,40 @@
 # Introduction
 
-**dtree** is a lightweight, fast, and feature-rich Terminal User Interface (TUI) application for interactive directory tree navigation. It combines the visual appeal of a tree view with powerful features like file preview, fuzzy search, bookmarks, and more.
+**bmrk** is a compact inline TUI for directory navigation and bookmark management.
+It fits in 8 rows and never takes over your terminal screen.
 
-## What is dtree?
+## What is bmrk?
 
-dtree provides a visual, interactive way to navigate your filesystem directly from the terminal. Unlike traditional command-line tools like `cd` and `ls`, dtree gives you a bird's-eye view of your directory structure while maintaining the speed and efficiency of terminal-based workflows.
+bmrk is written in Rust and designed for fast, keyboard-driven directory navigation.
+Unlike traditional `cd` + `ls` workflows, bmrk gives you a visual tree view of your
+filesystem directly in the terminal stream — without interrupting your scroll history
+or entering a fullscreen mode.
+
+The binary is `bmrk`. The shell wrapper `bm` wraps it and handles `cd` automatically:
+because a process cannot change its parent shell's directory, a thin wrapper is required
+(the same approach used by `fzf`, `zoxide`, and `autojump`).
 
 ## Key Features
 
-- **Interactive Tree View**: Visual directory tree with expand/collapse functionality
-- **File Preview**: Syntax-highlighted preview panel with support for 100+ languages
-- **Fuzzy Search**: Fast, asynchronous search with intelligent fuzzy matching
-- **Bookmarks**: Save and quickly jump to favorite directories
-- **Directory Sizes**: Asynchronous calculation of directory sizes with visual indicators
-- **Fullscreen Viewer**: Dedicated file viewer with search, line numbers, and tail mode
-- **Binary File Support**: Automatic detection with hex editor integration
-- **Mouse Support**: Click, double-click, drag, and scroll
-- **Customizable**: TOML-based configuration with theme support
-- **Bash Integration**: Seamlessly integrates with your shell workflow
+- **Compact inline mode** — 8 rows, no fullscreen takeover, terminal fully restored on exit
+- **Interactive tree view** — directory navigation with expand/collapse and vim-style keys
+- **Bookmark system** — save and jump to favorite directories; `bm myproject` navigates instantly
+- **Fuzzy search** — fast asynchronous folder-name search with intelligent matching
+- **Disk selection** — browse and switch between all drives and mount points
+- **Mouse support** — click, double-click, scroll
+- **Customizable** — TOML configuration with theme presets and custom colors
 
-## Why dtree?
+## Design Philosophy
 
-### Speed
-- Written in Rust for maximum performance
-- Zero-copy tree operations using `Rc<RefCell<>>`
-- Asynchronous background operations (search, size calculation)
-- Lazy loading of directory contents
-
-### Usability
-- Vim-inspired keybindings
-- Mouse support for quick navigation
-- Context-aware UI (different modes for different tasks)
-- Comprehensive help system (press `i`)
-
-### Integration
-- Works seamlessly with your existing shell
-- Integrates with external editors and file managers
-- Respects terminal capabilities (colors, mouse, clipboard)
-
-## Philosophy
-
-dtree follows these design principles:
-
-1. **Fast by default**: Operations should be instant or clearly show progress
-2. **Keyboard-first**: All features accessible via keyboard, mouse optional
-3. **Terminal-native**: No GUI dependencies, works over SSH
-4. **Non-destructive**: View and navigate, never modify files
-5. **Configurable**: Sensible defaults, everything customizable
+1. **Keyboard-first** — all features accessible via keyboard, mouse is optional
+2. **Compact** — stays out of the way; opens and closes without disrupting your workflow
+3. **Terminal-native** — no GUI dependencies, works over SSH
+4. **Non-destructive** — navigate and view, never modify files
+5. **Configurable** — sensible defaults, everything customizable
 
 ## Next Steps
 
-- [Getting Started](./getting-started.md) - Quick start guide
-- [Installation](./installation.md) - Installation instructions
-- [Basic Usage](./usage.md) - Learn the basics
-- [Configuration](./configuration.md) - Customize dtree
+- [Getting Started](./getting-started.md) — quick start guide
+- [Installation](./installation.md) — installation instructions
+- [Basic Usage](./usage.md) — learn the basics
+- [Configuration](./configuration.md) — customize bmrk

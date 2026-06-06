@@ -1,576 +1,222 @@
 # CLI Reference
 
-Complete command-line interface reference for dtree.
-
-## Table of Contents
-
-- [Synopsis](#synopsis)
-- [Commands](#commands)
-- [Options](#options)
-- [Examples](#examples)
-- [Exit Codes](#exit-codes)
-- [Environment Variables](#environment-variables)
-
----
+Complete command-line interface reference for bmrk.
 
 ## Synopsis
 
-```bash
-dtree [OPTIONS] [PATH|BOOKMARK]
-dt [PATH|BOOKMARK|COMMAND]
+```
+bmrk [OPTIONS] [PATH|BOOKMARK]
+bm   [OPTIONS] [PATH|BOOKMARK]
 ```
 
-**Note**: `dt` is the recommended bash wrapper (see [Bash Integration](./bash-integration.md)).
+`bm` is the recommended shell wrapper (see [Installation](./installation.md)).
+Use `bmrk` directly in scripts where `cd` behavior is not needed.
 
 ---
 
-## Commands
-
-### Interactive Navigation
+## Interactive Navigation
 
 ```bash
-# Launch interactive tree from current directory
-dtree
-dt
+# Launch TUI from current directory
+bm
 
-# Navigate to specific directory
-dtree /path/to/directory
-dt /path/to/directory
+# Launch TUI with a specific directory as root
+bm /path/to/directory
 
-# Jump to bookmark
-dtree myproject
-dt myproject
+# Launch TUI at a relative path
+bm ../other-project
 
-# Return to previous directory (bash wrapper only)
-dt -
+# Jump to a bookmark (no TUI — navigates instantly)
+bm myproject
+
+# Return to previous directory (wrapper only)
+bm -
 ```
 
-**Behavior**:
-- Opens interactive TUI if no valid bookmark/path provided
-- With bash wrapper (`dt`), changes shell directory on exit
-- Without wrapper, prints path to stdout (for integration with other tools)
+**Resolution order for positional argument**:
+1. Saved bookmark with that name
+2. Valid directory path (absolute or relative)
+3. Error
 
-### File Viewing
+---
 
-```bash
-# View file in fullscreen mode
-dtree -v FILE
-dtree --view FILE
-dt -v FILE
-
-# Examples
-dt -v README.md
-dt -v /var/log/syslog
-dtree --view src/main.rs
-```
-
-**Behavior**:
-- Opens file in fullscreen viewer immediately
-- Press `q` to exit to tree view (navigate to file's directory)
-- Press `Esc` to exit dtree completely
-- Supports syntax highlighting for code files
-- Automatically detects and handles binary files
-
-### Bookmark Management
+## Bookmark Management
 
 ```bash
-# List all bookmarks
+# List all saved bookmarks
 bm -l
 bm --list
 
-# Add bookmark for current directory
+# Add bookmark for the current directory
 bm -a NAME
 bm --add NAME
 
-# Add bookmark for specific path
-bm -a NAME PATH
-bm --add NAME PATH
+# Add bookmark for a specific path
+bm -a NAME /path/to/directory
+bm --add NAME /path/to/directory
 
-# Remove bookmark
+# Remove a bookmark
 bm -d NAME
 bm --del NAME
-
-# Examples
-bm -a work
-bm -a myproject ~/projects/my-project
-bm -d work
 ```
 
-**Bookmark Names**:
-- Must be alphanumeric, hyphens, or underscores
-- Cannot contain path separators (`/`, `\`)
+**Bookmark naming rules**:
+- Alphanumeric characters, hyphens, underscores
+- No path separators (`/`, `\`)
 - Cannot use reserved names: `-`, `.`, `..`
 - Case-sensitive
 
-**Storage**:
-- Bookmarks saved to: `~/.config/dtree/bookmarks.json`
-- Auto-created on first use
-- Persists across sessions
+---
 
-### Help and Version
+## Help and Version
 
 ```bash
-# Show help
-dtree -h
-dtree --help
+# Show help (all keys, config paths, CLI reference)
+bm -h
+bm --help
 
 # Show version
-dtree --version
+bm -v
+bm --version
 ```
 
 ---
 
-## Options
+## Options Reference
 
 ### `-h, --help`
 
-Print help information and exit.
+Print the embedded help reference and exit. Covers all keybindings, CLI options,
+configuration file location, and bookmark storage paths.
 
-```bash
-dtree -h
-dtree --help
-```
+### `-v, --version`
 
-### `-v, --view FILE`
+Print the version string and exit.
 
-Open file in fullscreen viewer mode.
-
-```bash
-dtree -v README.md
-dtree --view /var/log/syslog
-```
-
-**Features**:
-- Syntax highlighting for code files
-- Line numbers (toggle with `l`)
-- Search within file (press `/`)
-- HEAD/TAIL modes for large files
-- Binary file support (opens hex editor with `e`)
-
-### `--version`
-
-Print version information and exit.
-
-```bash
-dtree --version
-```
-
-Output format: `dtree X.Y.Z`
+Output format: `bmrk x.y.z`
 
 ### `-l, --list`
 
-List all saved bookmarks.
-
-```bash
-bm -l
-bm --list
-```
+List all saved bookmarks to stdout and exit.
 
 ### `-a, --add NAME [PATH]`
 
-Add a bookmark. Uses current directory if PATH is omitted.
-
-```bash
-bm -a myproject
-bm -a myproject /path/to/project
-bm --add work
-```
+Add a bookmark named `NAME`. If `PATH` is omitted, the current working directory is used.
 
 ### `-d, --del NAME`
 
-Remove a bookmark by name.
-
-```bash
-bm -d myproject
-bm --del work
-```
+Remove the bookmark named `NAME`.
 
 ### `[PATH|BOOKMARK]`
 
-Optional positional argument for navigation.
+Optional positional argument.
 
-**Resolution Priority**:
-1. **Bookmark** - If bookmark with this name exists
-2. **Directory Path** - If valid directory path
-3. **File Path** - If valid file path (opens parent directory)
-4. **Error** - If none of the above
-
-```bash
-# Bookmark (if exists)
-dt myproject
-
-# Absolute path
-dt /home/user/projects
-
-# Relative path
-dt ../other-project
-
-# File (navigates to parent directory)
-dt README.md
-```
+- If a bookmark with this name exists — navigate to it (no TUI)
+- If a valid directory path — open TUI rooted there
+- Otherwise — error
 
 ---
 
-## Examples
+## Storage
 
-### Basic Navigation
+### Configuration
 
-```bash
-# Open dtree in current directory
-dt
+- **Linux/macOS**: `~/.config/bmrk/config.toml`
+- **Windows**: `%APPDATA%\bmrk\config.toml`
 
-# Navigate to /var/log
-dt /var/log
+Auto-created with defaults on first run.
 
-# Navigate to home directory
-dt ~
+### Bookmarks
 
-# Navigate to parent directory
-dt ..
-```
+- **Linux/macOS**: `~/.config/bmrk/bookmarks.json`
+- **Windows**: `%APPDATA%\bmrk\bookmarks.json`
 
-### Using Bookmarks
+Auto-created when the first bookmark is added.
 
-```bash
-# Save current directory as bookmark
-dt                          # Open dtree
-# Press 'm', type 'work', press Enter
-# Press 'q' to exit
-
-# Jump to bookmark
-dt work
-
-# Or use CLI
-bm -a work
-dt work
-```
-
-### File Viewing
-
-```bash
-# View system log
-dt -v /var/log/syslog
-
-# View source code with syntax highlighting
-dt -v src/main.rs
-
-# View large log file (use tail mode)
-dt -v /var/log/nginx/access.log
-# Press 'End' for tail mode (last 10K lines)
-```
-
-### Workflow Examples
-
-**Example 1: Quick Project Navigation**
-```bash
-# Save project locations
-bm -a frontend ~/projects/app-frontend
-bm -a backend ~/projects/app-backend
-bm -a docs ~/projects/documentation
-
-# Jump between projects
-dt frontend
-# ... work on frontend ...
-dt backend
-# ... work on backend ...
-dt -
-# Return to frontend
-```
-
-**Example 2: Log Inspection**
-```bash
-# View latest log entries
-dt -v /var/log/syslog
-# Press 'End' for tail mode
-# Press '/' to search
-# Type 'error', press Enter
-# Press 'n' for next match
-```
-
-**Example 3: Code Exploration**
-```bash
-# Open project
-dt ~/projects/myapp
-
-# Inside dtree:
-# Press 's' to enable file viewer
-# Press '/' to search for files
-# Type 'main', press Enter
-# Press 'v' to view in fullscreen
-# Press 'e' to edit in $EDITOR
+**Format** (JSON array):
+```json
+[
+  { "key": "work", "path": "/home/user/work" },
+  { "key": "webapp", "path": "/home/user/projects/webapp" }
+]
 ```
 
 ---
 
 ## Exit Codes
 
-dtree uses standard UNIX exit codes:
-
-| Code | Meaning                                                        |
-|------|----------------------------------------------------------------|
-| `0`  | Success - Normal exit                                          |
-| `1`  | Error - General error (invalid arguments, file not found, etc.)|
-| `2`  | Error - Invalid usage (wrong arguments)                        |
-
-**Examples**:
-```bash
-# Success
-dt /home/user
-echo $?  # 0
-
-# Error: directory doesn't exist
-dt /nonexistent/path
-echo $?  # 1
-
-# Error: invalid option
-dtree --invalid-option
-echo $?  # 2
-```
+| Code | Meaning                                       |
+|------|-----------------------------------------------|
+| `0`  | Normal exit                                   |
+| `1`  | Error (invalid argument, path not found, etc.)|
 
 ---
 
 ## Environment Variables
 
-### `DTREE_PREV_DIR`
+### `BMRK_PREV_DIR`
 
-Used by bash wrapper to track previous directory for `dt -` command.
+Used by the `bm` wrapper to track the previous directory for `bm -`.
 
-**Set by**: Bash wrapper after each successful navigation
-**Format**: Absolute directory path
-**Usage**: Internal - don't modify manually
-
-```bash
-# After navigation
-dt ~/projects
-echo $DTREE_PREV_DIR  # /home/user (previous location)
-
-# Return to previous
-dt -
-echo $PWD             # /home/user
-echo $DTREE_PREV_DIR  # /home/user/projects
-```
-
-### `EDITOR`
-
-Default text editor for `e` key (if not configured in `config.toml`).
-
-```bash
-export EDITOR=vim
-dt -v README.md
-# Press 'e' to open in vim
-```
-
-**Priority**:
-1. `editor` in `~/.config/dtree/config.toml`
-2. `$EDITOR` environment variable
-3. Default: `nano`
+- **Set by**: the `bm` wrapper after each successful navigation
+- **Format**: absolute directory path
+- **Usage**: internal — do not set manually
 
 ---
 
-## Configuration Files
+## Script Integration
 
-### `~/.config/dtree/config.toml`
-
-Main configuration file (auto-created on first run).
-
-See [Configuration Reference](./configuration.md) for details.
-
-### `~/.config/dtree/bookmarks.json`
-
-Bookmark storage (auto-created when first bookmark is added).
-
-**Format**:
-```json
-{
-  "myproject": {
-    "path": "/home/user/projects/my-project",
-    "name": "my-project"
-  }
-}
-```
-
-**Backup recommendation**: Include in dotfiles backup
-
----
-
-## Integration with Other Tools
-
-### Shell Integration (Bash)
-
-See [Bash Integration Guide](./bash-integration.md) for `dt` wrapper setup.
-
-### Script Integration
-
-Use `dtree` (not `dt`) in scripts:
+Use `bmrk` (not `bm`) in scripts to avoid the `cd` side-effect:
 
 ```bash
 #!/bin/bash
-# Select directory and process files
-selected=$(dtree /path/to/start | tail -n1)
-if [ -n "$selected" ] && [ -d "$selected" ]; then
-  cd "$selected"
-  # Process files...
+# Capture selected path from bmrk
+selected=$(bmrk /path/to/start)
+if [ -d "$selected" ]; then
+    # Process selected directory
+    echo "Selected: $selected"
 fi
 ```
 
-### Combining with Other Commands
-
-```bash
-# Find and navigate to directory
-dt $(find ~ -type d -name "projects" | head -1)
-
-# View most recent log
-dt -v $(ls -t /var/log/*.log | head -1)
-
-# Add multiple bookmarks from list
-while read -r name path; do
-  bm -a "$name" "$path"
-done < bookmarks.txt
-```
-
 ---
 
-## Comparison with Similar Tools
-
-### vs `tree`
+## Examples
 
 ```bash
-# tree - static output
-tree /path
+# Open TUI from current directory
+bm
 
-# dtree - interactive navigation
-dt /path
-```
+# Open TUI at /var/log
+bm /var/log
 
-**Advantages**:
-- Interactive navigation
-- File preview
-- Bookmarks
-- Search functionality
+# Jump to bookmark 'work' (no TUI)
+bm work
 
-### vs `ranger`/`nnn`
+# Return to previous directory
+bm -
 
-```bash
-# ranger - full file manager
-ranger
-
-# dtree - focused on directory navigation
-dt
-```
-
-**Advantages over full file managers**:
-- Lighter and faster
-- Better for quick navigation
-- Seamless shell integration
-- Focused feature set
-
-**When to use ranger/nnn instead**:
-- Need file operations (copy, move, delete)
-- Want tabs/multi-pane support
-- Prefer full file manager features
-
----
-
-## Troubleshooting
-
-### Bookmark Not Found
-
-```bash
-$ dt myproject
-Error: bookmark 'myproject' not found and path does not exist
-```
-
-**Solution**:
-```bash
-# List existing bookmarks
+# List all bookmarks
 bm -l
 
-# Create bookmark if needed
-bm -a myproject /path/to/project
+# Create a bookmark for ~/projects/webapp
+bm -a webapp ~/projects/webapp
+
+# Remove a bookmark
+bm -d webapp
+
+# Show version
+bm -v
+
+# Show help
+bm -h
 ```
-
-### Permission Denied
-
-```bash
-$ dt /root
-Error: Permission denied
-```
-
-**Solution**: Use `sudo` or navigate to accessible directories only.
-
-### Command Not Found
-
-```bash
-$ dt
-bash: dt: command not found
-```
-
-**Solution**: Add bash wrapper to `~/.bashrc` (see [Installation](./installation.md)).
-
-### File Not Found in Viewer
-
-```bash
-$ dt -v nonexistent.txt
-Error: File not found: nonexistent.txt
-```
-
-**Solution**: Check file path and permissions.
 
 ---
 
 ## See Also
 
-- [Getting Started](./getting-started.md) - Quick start guide
-- [Usage Guide](./usage.md) - Interactive usage
-- [Key Bindings](./keybindings.md) - Keyboard shortcuts
-- [Configuration](./configuration.md) - Config file reference
-- [Bash Integration](./bash-integration.md) - Shell wrapper setup
-
----
-
-## Appendix: Command Summary
-
-### One-line Command Reference
-
-```bash
-# Navigation
-dt                              # Open interactive tree
-dt PATH                         # Navigate to directory
-dt BOOKMARK                     # Jump to bookmark
-dt -                            # Previous directory
-
-# File viewing
-dt -v FILE                      # View file
-
-# Bookmarks
-bm -l                           # List bookmarks
-bm -a NAME [PATH]               # Add bookmark
-bm -d NAME                      # Remove bookmark
-
-# Help
-dtree -h                        # Show help
-dtree --version                 # Show version
-```
-
-### Interactive Mode Quick Reference
-
-Inside dtree TUI:
-
-```
-j/k ↓/↑         Navigate
-l/h →/←         Expand/collapse
-Enter           Enter directory
-u Backspace     Parent directory
-s               Toggle file viewer
-v               Fullscreen viewer
-/               Search
-m               Create bookmark
-'               Select bookmark
-e               Open in editor
-o               File manager
-c               Copy path
-i               Help
-z               Toggle sizes
-q               Exit (cd)
-Esc             Exit (no cd)
-```
+- [Getting Started](./getting-started.md)
+- [Basic Usage](./usage.md)
+- [Key Bindings](./keybindings.md)
+- [Configuration](./configuration.md)
+- [Installation](./installation.md)

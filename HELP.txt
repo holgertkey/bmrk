@@ -17,7 +17,7 @@ KEYBOARD NAVIGATION
   ↓ / j          Navigate down in the tree
   → / l          Expand directory (show subdirectories)
   ← / h          Collapse directory (hide subdirectories)
-  u              Go to parent directory (change root)
+  u              Go back (undo last navigation)
   Backspace      Go to parent directory (change root)
   Enter          Go into directory (change root to selected directory)
   q              Exit and print selected directory path to stdout
@@ -33,6 +33,7 @@ SEARCH
   Tab            Switch focus between tree and search results
   ↑↓ / jk        Navigate through search results
   Enter          Select result and jump to it in the tree
+  q              Exit and navigate to selected directory
 
   Search modes:
   • Normal search (query):   Case-insensitive substring matching
@@ -65,6 +66,7 @@ BOOKMARKS
       ↑↓ / jk     Move selection up/down
       d           Delete bookmark (press once to mark, twice to confirm)
       Enter       Jump to selected bookmark
+      q           Exit and navigate to selected bookmark
       Tab         Switch to filter mode
 
     Filter mode:

@@ -2,19 +2,21 @@
 
 This directory contains animated GIF demonstrations and screenshots.
 
-**📺 [View All Demos in Gallery →](../DEMOS.md)**
+**[View All Demos in Gallery →](../DEMOS.md)**
 
 ## Files
 
 ### Screenshots
-- `dtree_screenshot.png` - Main screenshot (used in README)
+- `dtree_screenshot.png` — Main screenshot
 
 ### Animated Demos
-- `tree_navigation.gif` - Tree navigation demo
-- `file_viewer.gif` - File viewer and syntax highlighting demo
-- `visual_selection.gif` - Visual selection mode demo
-- `search.gif` - Search functionality demo
-- `bookmarks.gif` - Bookmarks demo
+- `tree_navigation.gif` — Tree navigation demo
+- `search.gif` — Search functionality demo
+- `bookmarks.gif` — Bookmarks demo
+
+### Old/Unused Files
+- `file_viewer.gif` — Leftover from dtree (file viewer removed)
+- `visual_selection.gif` — Leftover from dtree (visual selection removed)
 
 ## Generation
 
@@ -30,7 +32,7 @@ See `demos/README.md` for detailed instructions.
 
 Keep GIF files under 5MB for fast loading:
 - Use optimized settings in VHS tapes
-- Limit demo duration to 10-15 seconds
+- Limit demo duration to 10–15 seconds
 - Optimize with gifsicle if needed:
   ```bash
   gifsicle -O3 --lossy=80 input.gif -o output.gif

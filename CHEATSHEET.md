@@ -65,6 +65,7 @@ bm -v / --version           # Show version
 | `Tab`       | Switch tree ↔ results   |
 | `j` `k`     | Navigate results        |
 | `Enter`     | Jump to result          |
+| `q`         | Exit and cd to result   |
 | `Esc`       | Cancel / close results  |
 
 **Fuzzy mode**: prefix query with `/` — e.g., `/srch` finds `search`.
@@ -83,6 +84,7 @@ bm -v / --version           # Show version
 | `Tab`   | Toggle filter mode    |
 | `d`     | Delete (press twice)  |
 | `Enter` | Jump to bookmark      |
+| `q`     | Exit and cd to bookmark |
 | `Esc`   | Close                 |
 
 ### CLI
@@ -132,7 +134,6 @@ max_name_length = 30    # Truncate long names (0 = disabled)
 [appearance.colors]
 selected_color = "cyan"
 directory_color = "blue"
-file_color = "white"
 
 [behavior]
 show_hidden = true

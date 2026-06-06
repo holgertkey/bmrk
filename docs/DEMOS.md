@@ -1,12 +1,13 @@
-# dtree - Demo Gallery
+# bmrk — Demo Gallery
 
-Visual demonstrations of dtree features and functionality.
+Visual demonstrations of bmrk features and functionality.
 
 ---
 
 ## Tree Navigation
 
-Navigate through directories with vim-style keybindings. Expand/collapse with `l`/`h`, move with `j`/`k`, enter directories with `Enter`.
+Navigate through directories with vim-style keybindings. Expand/collapse with `l`/`h`,
+move with `j`/`k`, enter directories with `Enter`, go back with `u`.
 
 ![Tree Navigation Demo](assets/tree_navigation.gif)
 
@@ -14,39 +15,21 @@ Navigate through directories with vim-style keybindings. Expand/collapse with `l
 
 ---
 
-## File Viewer with Syntax Highlighting
-
-Split view with syntax-highlighted file preview. Toggle with `s`, scroll with `Ctrl+j`/`Ctrl+k`, enter fullscreen with `v`.
-
-![File Viewer Demo](assets/file_viewer.gif)
-
-*Demo: File preview with syntax highlighting and fullscreen mode*
-
----
-
-## Visual Selection Mode
-
-Vim-style line selection with keyboard (`V` + `j`/`k`) or mouse. Copy selected lines to clipboard with `y`.
-
-![Visual Selection Demo](assets/visual_selection.gif)
-
-*Demo: Visual selection mode for copying text*
-
----
-
 ## Fuzzy Search
 
-Two-phase search: quick local + deep background. Normal (`/query`) and fuzzy (`//query`) modes with ranked results.
+Two-phase search: instant scan of loaded nodes, then deep background search across the
+full tree. Normal (`query`) and fuzzy (`/query`) modes with ranked results.
 
 ![Search Demo](assets/search.gif)
 
-*Demo: Search functionality with fuzzy matching*
+*Demo: Folder-name search with fuzzy matching*
 
 ---
 
 ## Bookmarks
 
-Create bookmarks with `m`, manage with CLI (`bm -l`, `bm -a`, `bm -d`), jump instantly with `bm bookmarkname`.
+Create bookmarks with `m`, manage with CLI (`bm -l`, `bm -a`, `bm -d`),
+jump instantly with `bm bookmarkname` or via the selection menu (`'`).
 
 ![Bookmarks Demo](assets/bookmarks.gif)
 
@@ -56,49 +39,33 @@ Create bookmarks with `m`, manage with CLI (`bm -l`, `bm -a`, `bm -d`), jump ins
 
 ## Key Features Shown
 
-### Navigation Features
+### Navigation
 - ✅ Vim-style keybindings (j/k/h/l)
 - ✅ Tree expansion/collapse
-- ✅ Directory traversal
-- ✅ Parent navigation (u/Backspace)
-
-### File Viewing
-- ✅ Split view mode (s key)
-- ✅ Fullscreen viewer (v key)
-- ✅ Syntax highlighting (100+ languages)
-- ✅ Line numbers (l key)
-- ✅ Line wrapping (w key)
-- ✅ Scroll navigation (j/k, Ctrl+j/k, Page Up/Down)
-
-### Visual Selection
-- ✅ Vim-style line selection (V key)
-- ✅ Keyboard navigation (j/k)
-- ✅ Mouse scroll support
-- ✅ Copy to clipboard (y key)
-- ✅ Visual feedback with highlighting
+- ✅ Directory traversal and root change (Enter)
+- ✅ Navigation history and undo (u/Backspace)
+- ✅ Disk/drive selection (d)
 
 ### Search
-- ✅ Tree search (/ key)
-- ✅ Fuzzy matching (// prefix)
-- ✅ Real-time results
+- ✅ Folder-name search (/ key)
+- ✅ Fuzzy matching (/query prefix)
 - ✅ Background async search
 - ✅ Result navigation
-- ✅ Jump to file (Enter)
+- ✅ Exit and cd to result (q)
 
 ### Bookmarks
 - ✅ Create bookmarks (m key)
 - ✅ Browse bookmarks (' key)
 - ✅ CLI management (bm -l / -a / -d)
-- ✅ Quick navigation
-- ✅ Filter mode
+- ✅ Quick navigation (bm bookmarkname)
+- ✅ Filter mode (Tab)
 
 ---
 
 ## More Information
 
-- **[README](../README.md)** - Full documentation
-- **[CHEATSHEET](../CHEATSHEET.md)** - Quick reference
-- **[Recording Guide](../demos/README.md)** - How to create demos
+- **[README](../README.md)** — Full documentation
+- **[Key Bindings](./keybindings.md)** — Quick reference / cheatsheet
 
 ---
 
