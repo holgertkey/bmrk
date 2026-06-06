@@ -10,7 +10,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{List, ListItem, ListState, Paragraph, Wrap},
+    widgets::{List, ListItem, ListState, Paragraph},
     Frame,
 };
 fn truncate_name_middle(name: &str, max_len: usize) -> String {
@@ -34,6 +34,31 @@ fn truncate_name_middle(name: &str, max_len: usize) -> String {
         .rev()
         .collect();
     format!("{}...{}", first, last)
+}
+
+/// Word-wrap a comma-separated bookmark key string to `width` columns.
+/// Returns lines joined with `\n`; the first line has a leading space.
+fn wrap_bookmark_keys(keys_str: &str, width: usize) -> String {
+    if keys_str.is_empty() || width == 0 {
+        return String::new();
+    }
+    let mut lines: Vec<String> = Vec::new();
+    let mut current = String::from(" ");
+    for (i, word) in keys_str.split_ascii_whitespace().enumerate() {
+        if i == 0 {
+            current.push_str(word);
+        } else if current.len() + 1 + word.len() <= width {
+            current.push(' ');
+            current.push_str(word);
+        } else {
+            lines.push(std::mem::take(&mut current));
+            current.push_str(word);
+        }
+    }
+    if !current.is_empty() {
+        lines.push(current);
+    }
+    lines.join("\n")
 }
 
 /// UI rendering state
@@ -115,22 +140,13 @@ impl UI {
                     .map(|b| b.key.as_str())
                     .collect::<Vec<_>>()
                     .join(", ");
-                let text = format!(" {keys}");
-                let width = area.width.max(1) as usize;
-                // Simulate word-wrap line count
-                let mut line_count = 1usize;
-                let mut col = 0usize;
-                for word in text.split_ascii_whitespace() {
-                    let wlen = word.len();
-                    if col == 0 {
-                        col = wlen;
-                    } else if col + 1 + wlen <= width {
-                        col += 1 + wlen;
-                    } else {
-                        line_count += 1;
-                        col = wlen;
-                    }
-                }
+                let wrap_width = if config.appearance.max_name_length > 0 {
+                    config.appearance.max_name_length
+                } else {
+                    area.width as usize
+                };
+                let wrapped = wrap_bookmark_keys(&keys, wrap_width);
+                let line_count = wrapped.lines().count().max(1);
                 (line_count as u16).min(available).max(1)
             };
             let content_height = header_rows + body_rows;
@@ -436,10 +452,14 @@ impl UI {
                     .map(|b| b.key.as_str())
                     .collect::<Vec<_>>()
                     .join(", ");
+                let wrap_width = if config.appearance.max_name_length > 0 {
+                    config.appearance.max_name_length
+                } else {
+                    area.width as usize
+                };
+                let wrapped = wrap_bookmark_keys(&keys, wrap_width);
                 frame.render_widget(
-                    Paragraph::new(format!(" {keys}"))
-                        .style(Style::default().fg(file_color))
-                        .wrap(Wrap { trim: false }),
+                    Paragraph::new(wrapped).style(Style::default().fg(file_color)),
                     body_area,
                 );
             }
