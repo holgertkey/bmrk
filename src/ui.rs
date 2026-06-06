@@ -246,16 +246,23 @@ impl UI {
             } else {
                 String::new()
             };
+            let active_path = if bookmarks.is_creating {
+                nav.get_selected_node()
+                    .map(|n| n.borrow().path.display().to_string())
+                    .unwrap_or(root_path)
+            } else {
+                root_path
+            };
             let max_path_len = (area.width as usize)
                 .saturating_sub(hints.len() + count_str.len() + 4)
                 .max(8);
-            let path_display = if root_path.len() > max_path_len {
+            let path_display = if active_path.len() > max_path_len {
                 format!(
                     "...{}",
-                    &root_path[root_path.len().saturating_sub(max_path_len)..]
+                    &active_path[active_path.len().saturating_sub(max_path_len)..]
                 )
             } else {
-                root_path
+                active_path
             };
             let header_icon = if config.appearance.icons != "ascii" { " ▼ " } else { " v " };
             frame.render_widget(
