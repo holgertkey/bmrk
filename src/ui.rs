@@ -10,7 +10,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{List, ListItem, ListState, Paragraph},
+    widgets::{List, ListItem, ListState, Paragraph, Wrap},
     Frame,
 };
 fn truncate_name_middle(name: &str, max_len: usize) -> String {
@@ -106,9 +106,34 @@ impl UI {
             let header_rows: u16 = 1;
             let input_rows: u16 = 1;
             let available = area.height.saturating_sub(header_rows + input_rows);
-            let total_items = bookmarks.list().len() as u16;
-            let list_height = total_items.min(available);
-            let content_height = header_rows + list_height;
+            let body_rows: u16 = if bookmarks.list().is_empty() {
+                0
+            } else {
+                let keys = bookmarks
+                    .list()
+                    .iter()
+                    .map(|b| b.key.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                let text = format!(" {keys}");
+                let width = area.width.max(1) as usize;
+                // Simulate word-wrap line count
+                let mut line_count = 1usize;
+                let mut col = 0usize;
+                for word in text.split_ascii_whitespace() {
+                    let wlen = word.len();
+                    if col == 0 {
+                        col = wlen;
+                    } else if col + 1 + wlen <= width {
+                        col += 1 + wlen;
+                    } else {
+                        line_count += 1;
+                        col = wlen;
+                    }
+                }
+                (line_count as u16).min(available).max(1)
+            };
+            let content_height = header_rows + body_rows;
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([
@@ -405,23 +430,18 @@ impl UI {
             let file_color =
                 Config::parse_color(Config::get_color(&config.appearance.colors.file_color));
 
-            if all_bookmarks.is_empty() {
+            if !all_bookmarks.is_empty() {
+                let keys = all_bookmarks
+                    .iter()
+                    .map(|b| b.key.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", ");
                 frame.render_widget(
-                    Paragraph::new("No existing bookmarks")
-                        .style(Style::default().fg(Color::DarkGray)),
+                    Paragraph::new(format!(" {keys}"))
+                        .style(Style::default().fg(file_color))
+                        .wrap(Wrap { trim: false }),
                     body_area,
                 );
-            } else {
-                let items: Vec<ListItem> = all_bookmarks
-                    .iter()
-                    .skip(bookmarks.scroll_offset)
-                    .map(|bookmark| {
-                        let name = bookmark.name.as_deref().unwrap_or("(unnamed)");
-                        ListItem::new(format!("{:<10} {}", bookmark.key, name))
-                            .style(Style::default().fg(file_color))
-                    })
-                    .collect();
-                frame.render_widget(List::new(items), body_area);
             }
         } else if search.show_results && search.focus_on_results {
             // Inline search results
