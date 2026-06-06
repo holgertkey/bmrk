@@ -178,7 +178,7 @@ impl EventHandler {
                     bookmarks.exit_creation_mode();
                     return Ok(Some(PathBuf::new()));
                 }
-                KeyCode::Char(c) => {
+                KeyCode::Char(c) if c != ' ' => {
                     bookmarks.add_char(c);
                     return Ok(Some(PathBuf::new()));
                 }
