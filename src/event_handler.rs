@@ -39,7 +39,7 @@ impl EventHandler {
         search: &mut Search,
         bookmarks: &mut Bookmarks,
         disks: &mut Disks,
-        ui: &UI,
+        _ui: &UI,
         config: &Config,
     ) -> Result<Option<PathBuf>> {
         // Search input mode
@@ -132,16 +132,11 @@ impl EventHandler {
             if key.modifiers.contains(KeyModifiers::CONTROL) {
                 match key.code {
                     KeyCode::Char('j') | KeyCode::Char('J') | KeyCode::Down => {
-                        let max_visible = if ui.bottom_panel_height >= 5 {
-                            (ui.bottom_panel_height as usize).saturating_sub(5).max(1)
-                        } else {
-                            (ui.terminal_height as usize).saturating_sub(2).max(1)
-                        };
-                        bookmarks.scroll_down(max_visible);
+                        nav.move_down();
                         return Ok(Some(PathBuf::new()));
                     }
                     KeyCode::Char('k') | KeyCode::Char('K') | KeyCode::Up => {
-                        bookmarks.scroll_up();
+                        nav.move_up();
                         return Ok(Some(PathBuf::new()));
                     }
                     _ => {}

@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - `icons` setting in `[appearance]` config: `"unicode"` (default, `▼`/`▶`) or `"ascii"` (`v`/`>`).
+- **Add bookmark** menu: header now shows the path of the folder being bookmarked instead of the navigation root.
+- **Add bookmark** menu: existing bookmark keys are listed on a single comma-separated line (wraps at `max_name_length` columns) instead of a multi-line list.
+- **Add bookmark** menu: `Ctrl+j` / `Ctrl+k` scrolls the directory tree (same as mouse wheel), making it easy to pick a different target folder without leaving creation mode.
+
+### Changed
+- `max_name_length` default value changed from `30` to `80`.
+
+### Fixed
+- **Add bookmark** menu: spaces are now ignored in the bookmark name input field.
 
 ### Changed
 - Leaf directories (no visible children) no longer show the `>` expand arrow and cannot be expanded.
