@@ -115,6 +115,15 @@ impl EventHandler {
                     let _ = bookmarks.handle_deletion_key();
                     return Ok(Some(PathBuf::new()));
                 }
+                KeyCode::Char('q') | KeyCode::Char('Q') if !bookmarks.filter_mode => {
+                    if let Some(bookmark) = bookmarks.get_selected_bookmark() {
+                        let path = bookmark.path.clone();
+                        bookmarks.exit_selection_mode();
+                        return Ok(Some(path));
+                    }
+                    bookmarks.exit_selection_mode();
+                    return Ok(None);
+                }
                 KeyCode::Char(c) if bookmarks.filter_mode => {
                     bookmarks.add_char(c);
                     return Ok(Some(PathBuf::new()));

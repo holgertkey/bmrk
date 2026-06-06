@@ -212,7 +212,7 @@ impl UI {
             let hints = if bookmarks.filter_mode {
                 "  jk:select  Enter:jump  Tab:nav  Esc:cancel"
             } else {
-                "  jk:select  Enter:jump  Tab:filter  dd:del  Esc:cancel"
+                "  jk:select  Enter:jump  q:exit  Tab:filter  dd:del  Esc:cancel"
             };
             let filtered = bookmarks.get_filtered_bookmarks();
             let label = if bookmarks.filter_mode {
