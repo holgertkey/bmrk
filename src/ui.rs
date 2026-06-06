@@ -257,9 +257,10 @@ impl UI {
             } else {
                 root_path
             };
+            let header_icon = if config.appearance.icons != "ascii" { " ▼ " } else { " v " };
             frame.render_widget(
                 Paragraph::new(Line::from(vec![
-                    Span::styled(" v ", Style::default().fg(Color::Green)),
+                    Span::styled(header_icon, Style::default().fg(Color::Green)),
                     Span::styled(
                         path_display,
                         Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
