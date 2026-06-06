@@ -531,7 +531,13 @@ impl UI {
                     let n = node.borrow();
                     let indent = "  ".repeat(n.depth);
                     let icon = if n.is_dir {
-                        if n.is_expanded { "v " } else { "> " }
+                        if n.is_expanded {
+                            "v "
+                        } else if n.has_children == Some(false) {
+                            "  "
+                        } else {
+                            "> "
+                        }
                     } else {
                         "  "
                     };

@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Leaf directories (no visible children) no longer show the `>` expand arrow and cannot be expanded.
+
 ### Added
 - Navigation history (`u` key): each `Enter`, bookmark jump, disk selection, and `Backspace`
   push the current root to a 50-entry history stack; `u` pops and returns to the previous root

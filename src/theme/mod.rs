@@ -3,10 +3,10 @@ use serde::{Deserialize, Serialize};
 
 pub mod presets;
 
-/// Theme configuration with customizable colors
-/// All fields are Option<String>:
-/// - None means the color is not set (use preset theme value)
-/// - Some(value) means the color is explicitly set (override preset)
+/// Theme configuration with customizable colors.
+/// All fields are `Option<String>`:
+/// - `None` means the color is not set (use preset theme value)
+/// - `Some(value)` means the color is explicitly set (override preset)
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ThemeConfig {
     /// Color for selected items
