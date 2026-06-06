@@ -182,7 +182,10 @@ mod tests {
         // Press '\'' to enter bookmark selection mode
         let key_tick = KeyEvent::new(KeyCode::Char('\''), KeyModifiers::NONE);
         let result = app.handle_key(key_tick).unwrap();
-        assert!(result.is_some(), "bookmark selection should not exit the app");
+        assert!(
+            result.is_some(),
+            "bookmark selection should not exit the app"
+        );
         assert!(app.bookmarks.is_selecting);
 
         // Press Esc to cancel

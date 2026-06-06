@@ -1,7 +1,10 @@
 use anyhow::Result;
 use crossterm::{
     cursor::MoveTo,
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyEventKind, MouseEvent, MouseEventKind},
+    event::{
+        self, DisableMouseCapture, EnableMouseCapture, Event, KeyEventKind, MouseEvent,
+        MouseEventKind,
+    },
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };

@@ -195,8 +195,7 @@ fn main() -> Result<()> {
 
     let result = {
         let mut terminal = setup_terminal_compact()?;
-        let r = run_app(&mut terminal, &mut app);
-        r
+        run_app(&mut terminal, &mut app)
     };
     cleanup_terminal_compact()?;
 

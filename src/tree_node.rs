@@ -48,7 +48,12 @@ impl TreeNode {
     /// Probe whether this directory has any visible children under the given settings,
     /// without fully loading children. Result is cached in `has_children`.
     /// IMPORTANT: the filtering logic here must stay in sync with `load_children`.
-    pub fn probe_has_children(&mut self, show_files: bool, show_hidden: bool, follow_symlinks: bool) {
+    pub fn probe_has_children(
+        &mut self,
+        show_files: bool,
+        show_hidden: bool,
+        follow_symlinks: bool,
+    ) {
         if !self.is_dir {
             self.has_children = Some(false);
             return;
@@ -243,7 +248,11 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let mut node = make_dir_node(tmp.path().to_path_buf());
         node.load_children(false, false, false).unwrap();
-        assert_eq!(node.has_children, Some(false), "empty dir should be Some(false)");
+        assert_eq!(
+            node.has_children,
+            Some(false),
+            "empty dir should be Some(false)"
+        );
     }
 
     #[test]
@@ -265,7 +274,11 @@ mod tests {
         root.load_children(false, false, false).unwrap();
 
         let child_node = root.children[0].borrow();
-        assert_eq!(child_node.has_children, Some(false), "leaf child should be probed as Some(false)");
+        assert_eq!(
+            child_node.has_children,
+            Some(false),
+            "leaf child should be probed as Some(false)"
+        );
     }
 
     #[test]

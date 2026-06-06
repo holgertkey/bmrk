@@ -200,7 +200,9 @@ impl UI {
                     Span::styled(" > ", Style::default().fg(Color::Yellow)),
                     Span::styled(
                         label_display,
-                        Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                        Style::default()
+                            .fg(Color::Cyan)
+                            .add_modifier(Modifier::BOLD),
                     ),
                     Span::styled(hints, Style::default().fg(Color::DarkGray)),
                 ])),
@@ -235,7 +237,9 @@ impl UI {
                     Span::styled(" > ", Style::default().fg(Color::Yellow)),
                     Span::styled(
                         label_display,
-                        Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                        Style::default()
+                            .fg(Color::Cyan)
+                            .add_modifier(Modifier::BOLD),
                     ),
                     Span::styled(hints, Style::default().fg(Color::DarkGray)),
                 ])),
@@ -269,7 +273,9 @@ impl UI {
                     Span::styled(" * ", Style::default().fg(Color::Yellow)),
                     Span::styled(
                         label_display,
-                        Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                        Style::default()
+                            .fg(Color::Cyan)
+                            .add_modifier(Modifier::BOLD),
                     ),
                     Span::styled(hints, Style::default().fg(Color::DarkGray)),
                 ])),
@@ -305,17 +311,25 @@ impl UI {
             } else {
                 active_path
             };
-            let header_icon = if config.appearance.icons != "ascii" { " ▼ " } else { " v " };
+            let header_icon = if config.appearance.icons != "ascii" {
+                " ▼ "
+            } else {
+                " v "
+            };
             frame.render_widget(
                 Paragraph::new(Line::from(vec![
                     Span::styled(header_icon, Style::default().fg(Color::Green)),
                     Span::styled(
                         path_display,
-                        Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                        Style::default()
+                            .fg(Color::Cyan)
+                            .add_modifier(Modifier::BOLD),
                     ),
                     Span::styled(
                         count_str,
-                        Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                        Style::default()
+                            .fg(Color::Cyan)
+                            .add_modifier(Modifier::BOLD),
                     ),
                     Span::styled(hints, Style::default().fg(Color::DarkGray)),
                 ])),
@@ -581,7 +595,11 @@ impl UI {
                     let unicode_icons = config.appearance.icons != "ascii";
                     let icon = if n.is_dir {
                         if n.is_expanded {
-                            if unicode_icons { "▼ " } else { "v " }
+                            if unicode_icons {
+                                "▼ "
+                            } else {
+                                "v "
+                            }
                         } else if n.has_children == Some(false) {
                             "  "
                         } else if unicode_icons {

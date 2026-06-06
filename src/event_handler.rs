@@ -370,9 +370,7 @@ impl EventHandler {
         config: &Config,
     ) -> Result<()> {
         if disks.is_selecting {
-            if mouse.row >= ui.tree_area_top
-                && mouse.row < ui.tree_area_top + ui.tree_area_height
-            {
+            if mouse.row >= ui.tree_area_top && mouse.row < ui.tree_area_top + ui.tree_area_height {
                 let clicked_row_visible = mouse.row.saturating_sub(ui.tree_area_top) as usize;
                 let clicked_disk = clicked_row_visible + ui.disk_scroll_offset;
 
@@ -411,16 +409,13 @@ impl EventHandler {
 
             if clicked_row < nav.flat_list.len() {
                 let now = Instant::now();
-                let is_double_click =
-                    if let Some((last_time, last_idx)) = self.last_click_time {
-                        clicked_row == last_idx
-                            && now.duration_since(last_time)
-                                < Duration::from_millis(
-                                    config.behavior.double_click_timeout_ms,
-                                )
-                    } else {
-                        false
-                    };
+                let is_double_click = if let Some((last_time, last_idx)) = self.last_click_time {
+                    clicked_row == last_idx
+                        && now.duration_since(last_time)
+                            < Duration::from_millis(config.behavior.double_click_timeout_ms)
+                } else {
+                    false
+                };
 
                 if is_double_click {
                     let node = &nav.flat_list[clicked_row];
