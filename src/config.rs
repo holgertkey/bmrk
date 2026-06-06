@@ -42,7 +42,7 @@ fn default_theme() -> String {
     "default".to_string()
 }
 fn default_max_name_length() -> usize {
-    30
+    80
 }
 fn default_icons() -> String {
     "unicode".to_string()
@@ -86,7 +86,7 @@ fn default_follow_symlinks() -> bool {
     true
 }
 fn default_double_click_timeout() -> u64 {
-    500
+    800
 }
 fn default_mouse_scroll_lines() -> usize {
     1
@@ -311,7 +311,7 @@ theme = "default"
 # Maximum filename length in the tree before middle-truncation
 # Example: "very_long_project_name.rs" -> "very_long_pro...ame.rs"
 # Set to 0 to disable truncation
-max_name_length = 30
+max_name_length = 80
 
 # Icon set used for the directory tree
 # "unicode" - filled triangles: ▼ (expanded)  ▶ (collapsed)
@@ -344,7 +344,7 @@ show_hidden = true
 follow_symlinks = true
 
 # Double-click timeout in milliseconds
-double_click_timeout_ms = 500
+double_click_timeout_ms = 800
 
 # Number of lines to scroll with mouse wheel
 mouse_scroll_lines = 1
@@ -377,7 +377,7 @@ mod tests {
     #[test]
     fn test_default_config() {
         let config = Config::default();
-        assert_eq!(config.appearance.max_name_length, 30);
+        assert_eq!(config.appearance.max_name_length, 80);
         assert!(config.behavior.show_hidden);
     }
 
