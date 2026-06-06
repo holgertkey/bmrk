@@ -344,7 +344,7 @@ Intelligent fuzzy matching with scoring:
 
 ### Search Scope
 
-- **Tree mode** (default): Searches directories only
+- **Tree mode** (default): Searches directories only, matched against folder name (not full path)
 - **File viewer mode** (`s` enabled): Searches both files and directories
 
 ### Search Performance

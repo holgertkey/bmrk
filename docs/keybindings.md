@@ -56,7 +56,7 @@ This is the default mode when you first launch dtree.
 
 | Key | Action                                       |
 |-----|----------------------------------------------|
-| `/` | Enter search mode (tree search)              |
+| `/` | Enter search mode (folder name search)       |
 | `m` | Create bookmark (mark current location)      |
 | `'` | Open bookmark selection menu (apostrophe)    |
 

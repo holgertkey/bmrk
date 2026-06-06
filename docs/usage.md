@@ -196,7 +196,7 @@ o             Open in configured file manager
 
 ### Tree Search
 
-Search for files and directories in the tree:
+Search for **directories by folder name** in the tree (files are not included in results):
 
 ```
 /             Enter search mode
@@ -209,11 +209,12 @@ or replace the tree body directly (compact mode — no fullscreen switch require
 
 ```
 /             Enter search mode
-main          Type query (finds "main.rs", "main.cpp", etc.)
+src           Type query (finds all folders named "src", "src-backup", etc.)
 Enter         Execute search
 ```
 
-Matches any file/directory containing "main" (case-insensitive).
+Matches any folder whose name contains "src" (case-insensitive). Matching is against the
+folder name only — not the full path.
 
 #### Fuzzy Search
 
@@ -415,7 +416,7 @@ dt webapp  # Instant navigation
 The search feature searches the entire tree, including collapsed directories:
 
 ```
-/config       Finds all files/dirs with "config" in the name
+/config       Finds all folders with "config" in the name
 //.git        Fuzzy search for ".git" directories
 ```
 
