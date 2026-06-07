@@ -324,7 +324,12 @@ impl UI {
             };
             frame.render_widget(
                 Paragraph::new(Line::from(vec![
-                    Span::styled(header_icon, Style::default().fg(Color::Green)),
+                    Span::styled(
+                        header_icon,
+                        Style::default().fg(Config::parse_color(Config::get_color(
+                            &config.appearance.colors.directory_color,
+                        ))),
+                    ),
                     Span::styled(
                         path_display,
                         Style::default()

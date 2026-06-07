@@ -1,7 +1,7 @@
 # Cargo.toml
 [package]
 name = "bmrk"
-version = "0.1.0+027"
+version = "0.1.0+028"
 edition = "2021"
 authors = ["holgertkey"]
 license = "MIT"
