@@ -64,32 +64,32 @@ fn nord_theme() -> ThemeConfig {
 /// Tokyo Night theme - Modern dark theme with vibrant colors
 fn tokyonight_theme() -> ThemeConfig {
     ThemeConfig {
-        selected_color: Some("#7aa2f7".to_string()),  // blue
-        directory_color: Some("#7dcfff".to_string()), // cyan
-        file_color: Some("#a9b1d6".to_string()),      // light gray-blue
-        error_color: Some("#f7768e".to_string()),     // red
-        highlight_color: Some("#e0af68".to_string()), // yellow
-        cursor_color: Some("#bb9af7".to_string()),    // purple for search & bookmarks
-        tree_cursor_color: Some("#a9b1d6".to_string()), // light gray-blue text
+        selected_color: Some("#7aa2f7".to_string()),       // blue
+        directory_color: Some("#7dcfff".to_string()),      // cyan
+        file_color: Some("#a9b1d6".to_string()),           // light gray-blue
+        error_color: Some("#f7768e".to_string()),          // red
+        highlight_color: Some("#e0af68".to_string()),      // yellow
+        cursor_color: Some("#bb9af7".to_string()),         // purple for search & bookmarks
+        tree_cursor_color: Some("#a9b1d6".to_string()),    // light gray-blue text
         tree_cursor_bg_color: Some("#1f202e".to_string()), // barely visible lighter background
-        header_path_color: Some("#7aa2f7".to_string()), // blue
-        header_hints_color: Some("#565f89".to_string()), // comment gray
+        header_path_color: Some("#7aa2f7".to_string()),    // blue
+        header_hints_color: Some("#565f89".to_string()),   // comment gray
     }
 }
 
 /// Dracula theme - Popular dark theme with high contrast
 fn dracula_theme() -> ThemeConfig {
     ThemeConfig {
-        selected_color: Some("#ff79c6".to_string()),  // pink
-        directory_color: Some("#8be9fd".to_string()), // cyan
-        file_color: Some("#f8f8f2".to_string()),      // white
-        error_color: Some("#ff5555".to_string()),     // red
-        highlight_color: Some("#f1fa8c".to_string()), // yellow
-        cursor_color: Some("#bd93f9".to_string()),    // purple for search & bookmarks
-        tree_cursor_color: Some("#f8f8f2".to_string()), // white text
+        selected_color: Some("#ff79c6".to_string()),       // pink
+        directory_color: Some("#8be9fd".to_string()),      // cyan
+        file_color: Some("#f8f8f2".to_string()),           // white
+        error_color: Some("#ff5555".to_string()),          // red
+        highlight_color: Some("#f1fa8c".to_string()),      // yellow
+        cursor_color: Some("#bd93f9".to_string()),         // purple for search & bookmarks
+        tree_cursor_color: Some("#f8f8f2".to_string()),    // white text
         tree_cursor_bg_color: Some("#2d2f3d".to_string()), // barely visible lighter background
-        header_path_color: Some("#ff79c6".to_string()), // pink
-        header_hints_color: Some("#6272a4".to_string()), // comment gray
+        header_path_color: Some("#ff79c6".to_string()),    // pink
+        header_hints_color: Some("#6272a4".to_string()),   // comment gray
     }
 }
 
