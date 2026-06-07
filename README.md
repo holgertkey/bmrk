@@ -53,20 +53,29 @@ The binary is at `target/release/bmrk` (Linux/macOS) or `target\release\bmrk.exe
 
 ### Step 2 — Set up the `bm` wrapper
 
-The wrapper is required for `cd` to work. Choose your shell below.
+The repository includes three ready-made wrapper files. Each one integrates `bmrk` with a specific
+shell so that `cd` works correctly. Pick the file that matches your environment.
 
 ---
 
-#### Windows — CMD
+#### `bm.bat` — Windows CMD
+
+**What it does.** `bm.bat` is a batch script that runs `bmrk.exe` and redirects its stdout to a
+temporary file. If the captured output is a valid directory path, it calls `cd /d` to change the
+current session's directory. Non-directory output (help text, version, bookmark lists) is printed
+as-is. The previous directory is saved in `%BMRK_PREV_DIR%` so that `bm -` can return to it.
+Flags that do not trigger navigation (`-h`, `--help`, `-v`, `--version`, `-l`, `--list`, `-a`,
+`--add`, `-d`, `--del`) are passed straight through to `bmrk.exe`.
+
+**Installation:**
 
 1. Copy `bmrk.exe` and `bm.bat` to the same directory that is on your `PATH`
    (e.g. `C:\Users\<YourName>\bin\`).
 
-2. If that directory is not on your PATH yet, add it:
+2. If that directory is not on your PATH yet, add it and open a new CMD window:
    ```
    setx PATH "%PATH%;C:\Users\<YourName>\bin"
    ```
-   Then open a new CMD window.
 
 3. Test:
    ```
@@ -76,7 +85,16 @@ The wrapper is required for `cd` to work. Choose your shell below.
 
 ---
 
-#### Windows — PowerShell
+#### `bm.ps1` — Windows PowerShell
+
+**What it does.** `bm.ps1` defines a `bm` function for PowerShell. It runs `bmrk.exe`, captures
+stdout to a temporary file, and calls `Set-Location` if the result is a valid directory path.
+The previous directory is stored in `$env:BMRK_PREV_DIR` for `bm -` support. Pass-through flags
+(`-h`, `--help`, `-v`, `--version`, `-l`, `--list`, `-a`, `--add`, `-d`, `--del`) are forwarded
+directly to `bmrk.exe` without any cd logic. Compatible with Windows PowerShell 5.1 and
+PowerShell 7+.
+
+**Installation:**
 
 1. Copy `bmrk.exe` to a directory on your PATH (e.g. `C:\Users\<YourName>\bin\`).
 
@@ -84,43 +102,14 @@ The wrapper is required for `cd` to work. Choose your shell below.
    ```powershell
    notepad $PROFILE
    ```
-   If the file does not exist yet, create it:
+   If the file does not exist yet, create it first:
    ```powershell
    New-Item -ItemType File -Force $PROFILE
    ```
 
-3. Add the wrapper to your profile. Choose one option:
-
-   **Option A — source the provided file (recommended):**
+3. Add the following line to your profile:
    ```powershell
    . "C:\path\to\bmrk\bm.ps1"
-   ```
-
-   **Option B — inline function (no extra file needed):**
-   ```powershell
-   function bm {
-       if ($args.Count -eq 1 -and $args[0] -eq '-') {
-           if ($env:BMRK_PREV_DIR -and (Test-Path $env:BMRK_PREV_DIR -PathType Container)) {
-               $prev = $env:BMRK_PREV_DIR
-               $env:BMRK_PREV_DIR = $PWD.Path
-               Set-Location $prev
-           } else { Write-Error 'bm: no previous directory' }
-           return
-       }
-       if ($args.Count -ge 1 -and $args[0] -in '-h','--help','-v','--version','-l','--list','-a','--add','-d','--del') {
-           & bmrk.exe @args; return
-       }
-       $t = [IO.Path]::GetTempFileName()
-       try {
-           & bmrk.exe @args > $t
-           if ($LASTEXITCODE -eq 0) {
-               $r = (Get-Content $t -Raw)?.Trim()
-               if ($r -and (Test-Path $r -PathType Container)) {
-                   $env:BMRK_PREV_DIR = $PWD.Path; Set-Location $r
-               } elseif ($r) { Write-Output $r }
-           }
-       } finally { Remove-Item $t -ErrorAction SilentlyContinue }
-   }
    ```
 
 4. Reload the profile:
@@ -136,7 +125,16 @@ The wrapper is required for `cd` to work. Choose your shell below.
 
 ---
 
-#### Linux / macOS — bash
+#### `bm.sh` — bash, zsh (and fish via comment)
+
+**What it does.** `bm.sh` defines a `bm` function for POSIX-compatible shells (bash and zsh). It
+runs `bmrk` via command substitution, captures stdout, and calls `cd` when the result is a valid
+directory. The previous directory is stored in `$BMRK_PREV_DIR` for `bm -` support. Any output
+that is not a directory path (help text, version, bookmark list) is echoed to the terminal
+unchanged. The file's header comment also contains a ready-to-use fish function for
+`~/.config/fish/functions/bm.fish`.
+
+**Installation — bash:**
 
 1. Copy the `bmrk` binary to a directory on your PATH:
    ```bash
@@ -144,65 +142,37 @@ The wrapper is required for `cd` to work. Choose your shell below.
    # or: sudo cp target/release/bmrk /usr/local/bin/
    ```
 
-2. Add the wrapper to `~/.bashrc` (choose one option):
-
-   **Option A — source the provided file:**
+2. Source the wrapper from your shell config:
    ```bash
    echo 'source /path/to/bmrk/bm.sh' >> ~/.bashrc
    ```
 
-   **Option B — inline one-liner (no extra file):**
-   ```bash
-   echo 'bm() { local r; r=$(bmrk "$@"); [ -d "$r" ] && cd "$r" || { [ -n "$r" ] && echo "$r"; }; }' >> ~/.bashrc
-   ```
-
-3. Reload:
+3. Reload and test:
    ```bash
    source ~/.bashrc
-   ```
-
-4. Test:
-   ```bash
    bm --version
    bm
    ```
 
----
+**Installation — zsh:**
 
-#### Linux / macOS — zsh
+Same steps as bash, but add to `~/.zshrc` instead of `~/.bashrc`.
 
-Same as bash, but edit `~/.zshrc` instead of `~/.bashrc`.
+**Installation — fish:**
 
----
+Fish uses its own function-file format and cannot source `bm.sh` directly. Instead, copy the fish
+function from the comment block at the top of `bm.sh` into a new file:
 
-#### Linux / macOS — fish
+```
+~/.config/fish/functions/bm.fish
+```
 
-1. Copy the binary to your PATH:
-   ```bash
-   cp target/release/bmrk ~/.local/bin/
-   ```
+Fish picks up functions in that directory automatically — no reload step needed. Test with:
 
-2. Create the function file:
-   ```bash
-   mkdir -p ~/.config/fish/functions
-   ```
-   Create `~/.config/fish/functions/bm.fish` with this content:
-   ```fish
-   function bm
-       set r (bmrk $argv)
-       if test -d "$r"
-           cd $r
-       else if test -n "$r"
-           echo $r
-       end
-   end
-   ```
-
-3. Fish reloads functions automatically. Test:
-   ```bash
-   bm --version
-   bm
-   ```
+```bash
+bm --version
+bm
+```
 
 ---
 
