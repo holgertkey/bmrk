@@ -15,7 +15,7 @@ jobs:
     outputs:
       version: ${{ steps.check.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Check tag matches Cargo.toml
         id: check
         run: |
@@ -52,7 +52,7 @@ jobs:
             binary: bmrk.exe
             archive_ext: zip
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
@@ -91,7 +91,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
@@ -106,7 +106,7 @@ jobs:
     needs: [release]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
       - name: Publish
         run: cargo publish --locked --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
