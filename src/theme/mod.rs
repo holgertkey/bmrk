@@ -21,10 +21,6 @@ pub struct ThemeConfig {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub file_color: Option<String>,
 
-    /// Color for borders
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub border_color: Option<String>,
-
     /// Color for error messages
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub error_color: Option<String>,
@@ -32,10 +28,6 @@ pub struct ThemeConfig {
     /// Color for search highlights (directory search)
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub highlight_color: Option<String>,
-
-    /// Color for file content search highlights
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub file_search_highlight_color: Option<String>,
 
     /// Color for cursor/selection highlight (search & bookmarks)
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -49,17 +41,6 @@ pub struct ThemeConfig {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tree_cursor_bg_color: Option<String>,
 
-    /// Color for main window border
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub main_border_color: Option<String>,
-
-    /// Color for panel borders (search, bookmarks)
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub panel_border_color: Option<String>,
-
-    /// Color for background (optional, uses terminal default if not set)
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub background_color: Option<String>,
 }
 
 impl ThemeConfig {
@@ -117,16 +98,11 @@ impl ThemeConfig {
             selected_color: Some("cyan".to_string()),
             directory_color: Some("gray".to_string()),
             file_color: Some("white".to_string()),
-            border_color: Some("gray".to_string()),
             error_color: Some("red".to_string()),
             highlight_color: Some("yellow".to_string()),
-            file_search_highlight_color: Some("yellow".to_string()),
             cursor_color: Some("yellow".to_string()),
             tree_cursor_color: Some("dim".to_string()),
             tree_cursor_bg_color: Some("dim".to_string()),
-            main_border_color: Some("gray".to_string()),
-            panel_border_color: Some("cyan".to_string()),
-            background_color: Some("reset".to_string()),
         }
     }
 }

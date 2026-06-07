@@ -278,16 +278,11 @@ impl Config {
         resolve_color!(selected_color);
         resolve_color!(directory_color);
         resolve_color!(file_color);
-        resolve_color!(border_color);
         resolve_color!(error_color);
         resolve_color!(highlight_color);
-        resolve_color!(file_search_highlight_color);
         resolve_color!(cursor_color);
         resolve_color!(tree_cursor_color);
         resolve_color!(tree_cursor_bg_color);
-        resolve_color!(main_border_color);
-        resolve_color!(panel_border_color);
-        resolve_color!(background_color);
 
         Ok(config)
     }
@@ -320,21 +315,16 @@ icons = "unicode"
 
 # Custom theme colors (override preset theme)
 [appearance.colors]
-# Color formats: name (red, blue...), #RRGGBB hex, 0-255 indexed, "reset"
+# Color formats: name (red, blue...), #RRGGBB hex, 0-255 indexed
 #
 # selected_color = "cyan"
 # directory_color = "gray"
 # file_color = "white"
-# border_color = "gray"
 # error_color = "red"
 # highlight_color = "yellow"
-# file_search_highlight_color = "yellow"
 # cursor_color = "yellow"
 # tree_cursor_color = "dim"
 # tree_cursor_bg_color = "dim"
-# main_border_color = "gray"
-# panel_border_color = "cyan"
-# background_color = "reset"
 
 [behavior]
 # Show hidden files (dotfiles)
