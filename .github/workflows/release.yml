@@ -28,10 +28,28 @@ jobs:
           fi
           echo "version=$TAG" >> "$GITHUB_OUTPUT"
 
+  create-release:
+    name: Create GitHub Release
+    needs: verify-version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - name: Create release
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --title "${{ github.ref_name }}" \
+            --generate-notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   build:
     name: Build (${{ matrix.target }})
-    needs: verify-version
+    needs: [verify-version, create-release]
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
@@ -80,31 +98,14 @@ jobs:
           Compress-Archive -Path "target\${{ matrix.target }}\release\${{ matrix.binary }}" -DestinationPath $ARCHIVE
           "ARCHIVE=$ARCHIVE" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      - uses: actions/upload-artifact@v5
-        with:
-          name: bmrk-${{ matrix.target }}
-          path: ${{ env.ARCHIVE }}
-
-  release:
-    name: Create GitHub Release
-    needs: [verify-version, build]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/download-artifact@v5
-        with:
-          path: artifacts
-          merge-multiple: true
-      - uses: softprops/action-gh-release@v2
-        with:
-          files: artifacts/*
-          generate_release_notes: true
+      - name: Upload to release
+        run: gh release upload "${{ github.ref_name }}" "${{ env.ARCHIVE }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   publish:
     name: Publish to crates.io
-    needs: [release]
+    needs: [build]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
