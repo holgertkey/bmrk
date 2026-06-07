@@ -44,13 +44,13 @@ impl EventHandler {
     ) -> Result<Option<PathBuf>> {
         // Search input mode
         if search.mode {
-            return self.handle_search_input(key, search, nav);
+            return self.handle_search_input(key, search, nav, config);
         }
 
         // Disk selection mode
         if disks.is_selecting {
             match key.code {
-                KeyCode::Esc => {
+                _ if config.keybindings.is_exit(key.code) => {
                     disks.exit_selection_mode();
                     return Ok(Some(PathBuf::new()));
                 }
@@ -64,7 +64,7 @@ impl EventHandler {
                     }
                     return Ok(Some(PathBuf::new()));
                 }
-                KeyCode::Char('q') | KeyCode::Char('Q') => {
+                _ if config.keybindings.is_quit(key.code) => {
                     if let Some(disk) = disks.get_selected() {
                         return Ok(Some(disk.mount_point.clone()));
                     }
@@ -85,7 +85,7 @@ impl EventHandler {
         // Bookmark selection mode
         if bookmarks.is_selecting {
             match key.code {
-                KeyCode::Esc => {
+                _ if config.keybindings.is_exit(key.code) => {
                     bookmarks.exit_selection_mode();
                     return Ok(Some(PathBuf::new()));
                 }
@@ -115,7 +115,7 @@ impl EventHandler {
                     let _ = bookmarks.handle_deletion_key();
                     return Ok(Some(PathBuf::new()));
                 }
-                KeyCode::Char('q') | KeyCode::Char('Q') if !bookmarks.filter_mode => {
+                _ if config.keybindings.is_quit(key.code) && !bookmarks.filter_mode => {
                     if let Some(bookmark) = bookmarks.get_selected_bookmark() {
                         let path = bookmark.path.clone();
                         bookmarks.exit_selection_mode();
@@ -153,7 +153,7 @@ impl EventHandler {
             }
 
             match key.code {
-                KeyCode::Esc => {
+                _ if config.keybindings.is_exit(key.code) => {
                     bookmarks.exit_creation_mode();
                     return Ok(Some(PathBuf::new()));
                 }
@@ -194,8 +194,8 @@ impl EventHandler {
             }
         }
 
-        // Esc — cancel search/exit
-        if matches!(key.code, KeyCode::Esc) {
+        // exit — cancel search / quit without output
+        if config.keybindings.is_exit(key.code) {
             if search.is_active() {
                 search.cancel_search();
                 return Ok(Some(PathBuf::new()));
@@ -207,11 +207,8 @@ impl EventHandler {
             }
         }
 
-        // q — exit with selected search result when focused on results
-        if matches!(key.code, KeyCode::Char('q') | KeyCode::Char('Q'))
-            && search.focus_on_results
-            && search.show_results
-        {
+        // quit — exit with selected search result when focused on results
+        if config.keybindings.is_quit(key.code) && search.focus_on_results && search.show_results {
             if let Some(result) = search.results.get(search.selected) {
                 let path = result.path.clone();
                 if result.is_dir {
@@ -223,8 +220,8 @@ impl EventHandler {
             return Ok(None);
         }
 
-        // q — exit, output path of selected directory for shell
-        if matches!(key.code, KeyCode::Char('q') | KeyCode::Char('Q')) {
+        // quit — exit and output path of selected directory for shell
+        if config.keybindings.is_quit(key.code) {
             if let Some(node) = nav.get_selected_node() {
                 let node_borrowed = node.borrow();
                 if node_borrowed.is_dir {
@@ -311,10 +308,10 @@ impl EventHandler {
                     nav.go_to_parent(false)?;
                 }
             }
-            KeyCode::Char('u') => {
+            _ if config.keybindings.is_go_to_parent(key.code) => {
                 nav.go_to_parent(false)?;
             }
-            KeyCode::Backspace => {
+            _ if config.keybindings.is_go_back(key.code) => {
                 nav.go_back(false)?;
             }
             _ if config.keybindings.is_create_bookmark(key.code) => {
@@ -338,9 +335,10 @@ impl EventHandler {
         key: KeyEvent,
         search: &mut Search,
         nav: &Navigation,
+        config: &Config,
     ) -> Result<Option<PathBuf>> {
         match key.code {
-            KeyCode::Esc => {
+            _ if config.keybindings.is_exit(key.code) => {
                 search.exit_mode();
                 Ok(Some(PathBuf::new()))
             }

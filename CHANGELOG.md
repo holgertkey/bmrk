@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `go_to_parent`, `go_back`, `quit`, `exit` keybinding fields — all four previously hardcoded navigation and exit keys are now remappable in `[keybindings]`. Defaults match the prior behavior (`u`, `Backspace`, `q`, `Esc`). Each field accepts a list so multiple keys can be bound to the same action.
 - `header_path_color` config field: color for the path, count, and mode labels in the header row (default: `"cyan"`).
 - `header_hints_color` config field: color for the key hint text in the header row (default: `"darkgray"`).
 - Both fields are supported in all six built-in theme presets.

@@ -95,7 +95,7 @@ fn default_mouse_scroll_lines() -> usize {
 /// Keybindings configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KeybindingsConfig {
-    /// Keys to search
+    /// Keys to enter search mode
     #[serde(default = "default_search_keys")]
     pub search: Vec<String>,
 
@@ -110,6 +110,22 @@ pub struct KeybindingsConfig {
     /// Keys to open disk selection panel
     #[serde(default = "default_select_disk_keys")]
     pub select_disk: Vec<String>,
+
+    /// Keys to go to parent directory (change root up one level)
+    #[serde(default = "default_go_to_parent_keys")]
+    pub go_to_parent: Vec<String>,
+
+    /// Keys to go back (undo last navigation)
+    #[serde(default = "default_go_back_keys")]
+    pub go_back: Vec<String>,
+
+    /// Keys to quit and output the selected path (navigate the shell)
+    #[serde(default = "default_quit_keys")]
+    pub quit: Vec<String>,
+
+    /// Keys to exit without output (cancel)
+    #[serde(default = "default_exit_keys")]
+    pub exit: Vec<String>,
 }
 
 impl Default for KeybindingsConfig {
@@ -119,6 +135,10 @@ impl Default for KeybindingsConfig {
             create_bookmark: default_create_bookmark_keys(),
             select_bookmark: default_select_bookmark_keys(),
             select_disk: default_select_disk_keys(),
+            go_to_parent: default_go_to_parent_keys(),
+            go_back: default_go_back_keys(),
+            quit: default_quit_keys(),
+            exit: default_exit_keys(),
         }
     }
 }
@@ -134,6 +154,18 @@ fn default_select_bookmark_keys() -> Vec<String> {
 }
 fn default_select_disk_keys() -> Vec<String> {
     vec!["d".to_string()]
+}
+fn default_go_to_parent_keys() -> Vec<String> {
+    vec!["u".to_string()]
+}
+fn default_go_back_keys() -> Vec<String> {
+    vec!["Backspace".to_string()]
+}
+fn default_quit_keys() -> Vec<String> {
+    vec!["q".to_string()]
+}
+fn default_exit_keys() -> Vec<String> {
+    vec!["Esc".to_string()]
 }
 
 impl KeybindingsConfig {
@@ -174,6 +206,26 @@ impl KeybindingsConfig {
 
     pub fn is_select_disk(&self, key: KeyCode) -> bool {
         self.matches_key(key, &self.select_disk)
+    }
+
+    /// Returns true if `key` is bound to "go to parent directory".
+    pub fn is_go_to_parent(&self, key: KeyCode) -> bool {
+        self.matches_key(key, &self.go_to_parent)
+    }
+
+    /// Returns true if `key` is bound to "go back" (undo last navigation).
+    pub fn is_go_back(&self, key: KeyCode) -> bool {
+        self.matches_key(key, &self.go_back)
+    }
+
+    /// Returns true if `key` is bound to "quit" (exit and output selected path).
+    pub fn is_quit(&self, key: KeyCode) -> bool {
+        self.matches_key(key, &self.quit)
+    }
+
+    /// Returns true if `key` is bound to "exit" (cancel/quit without output).
+    pub fn is_exit(&self, key: KeyCode) -> bool {
+        self.matches_key(key, &self.exit)
     }
 }
 
@@ -344,11 +396,17 @@ double_click_timeout_ms = 800
 mouse_scroll_lines = 1
 
 [keybindings]
-# Key bindings (each can have multiple keys)
+# Key bindings — each entry is a list; multiple keys can trigger the same action.
+# Supported key names: letters (a-z), symbols, Esc, Enter, Backspace, Tab,
+#   Up, Down, Left, Right, Home, End, PageUp, PageDown, Delete
 search = ["/"]
 create_bookmark = ["m"]
 select_bookmark = ["'"]
 select_disk = ["d"]
+go_to_parent = ["u"]
+go_back = ["Backspace"]
+quit = ["q"]
+exit = ["Esc"]
 "#;
 
         if let Some(parent) = path.parent() {

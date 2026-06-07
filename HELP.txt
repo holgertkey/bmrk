@@ -124,6 +124,10 @@ CONFIGURATION
                 selected_color, file_color, error_color, highlight_color,
                 cursor_color, tree_cursor_color, tree_cursor_bg_color
     • Behavior (show hidden files, follow symlinks, mouse scroll speed)
-    • Keybindings (customize keyboard shortcuts)
+    • Keybindings (all major keys are remappable)
+        go_to_parent = ["u"]       go_back = ["Backspace"]
+        quit         = ["q"]       exit    = ["Esc"]
+        search = ["/"]   create_bookmark = ["m"]
+        select_bookmark = ["'"]    select_disk = ["d"]
 
   To reset to defaults: delete the config file, it will be recreated on next run.

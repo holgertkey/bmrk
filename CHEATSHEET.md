@@ -150,6 +150,10 @@ follow_symlinks = true
 mouse_scroll_lines = 1
 
 [keybindings]
+go_to_parent = ["u"]
+go_back = ["Backspace"]
+quit = ["q"]
+exit = ["Esc"]
 search = ["/"]
 create_bookmark = ["m"]
 select_bookmark = ["'"]

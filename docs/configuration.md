@@ -175,25 +175,36 @@ mouse_scroll_lines = 3    # Faster scrolling
 
 ## Keybinding Configuration
 
-Customize the four configurable keys:
+All major keys are configurable. Each binding accepts a list so multiple keys can trigger the same action:
 
 ```toml
 [keybindings]
-search          = ["/"]    # Enter search mode
-create_bookmark = ["m"]    # Create bookmark
-select_bookmark = ["'"]    # Open bookmark selection
-select_disk     = ["d"]    # Open disk selection
+# Navigation
+go_to_parent = ["u"]          # Go to parent directory (change root up one level)
+go_back      = ["Backspace"]  # Go back (undo last navigation)
+
+# Exit
+quit = ["q"]    # Exit and output selected path to shell (triggers cd)
+exit = ["Esc"]  # Exit without output / cancel current mode
+
+# Panels
+search          = ["/"]   # Enter search mode
+create_bookmark = ["m"]   # Create bookmark
+select_bookmark = ["'"]   # Open bookmark selection
+select_disk     = ["d"]   # Open disk selection
 ```
 
-Each binding accepts a list — multiple keys can trigger the same action:
+Multiple keys per action:
 
 ```toml
-search = ["/", "?"]        # Both / and ? enter search mode
-create_bookmark = ["b"]    # Use 'b' instead of 'm'
+quit = ["q", "Q"]           # Both q and Q quit with output
+go_back = ["Backspace", "b"] # Backspace or b to go back
 ```
 
-Navigation keys (`j`, `k`, `h`, `l`, arrow keys, `Enter`, `Esc`, `Backspace`, `u`, `q`, `Tab`)
-and mode-internal keys are hardcoded and cannot be remapped.
+Supported key names: single letters/symbols, `Esc`, `Enter`, `Backspace`, `Tab`,
+`Up`, `Down`, `Left`, `Right`, `Home`, `End`, `PageUp`, `PageDown`, `Delete`.
+
+Keys not configurable: `j`/`k` (up/down), `h`/`l` (collapse/expand), arrow keys, `Enter`, `Tab` — these are hardcoded navigation keys within each mode.
 
 ## Resetting Configuration
 

@@ -20,24 +20,24 @@ Default mode when bmrk launches.
 | `l` or `→`  | Expand directory (show subdirectories)                                   |
 | `h` or `←`  | Collapse expanded directory; if already collapsed, move to parent        |
 | `Enter`     | Change root to selected directory                                        |
-| `u`         | Go to parent directory (change root)                                     |
-| `Backspace` | Go back (undo last navigation)                                           |
+| `u`         | Go to parent directory (change root) — configurable: `go_to_parent`     |
+| `Backspace` | Go back (undo last navigation) — configurable: `go_back`                |
 
 ### Other Actions
 
 | Key | Action                              |
 |-----|-------------------------------------|
-| `/` | Enter search mode (folder name search) |
-| `m` | Create bookmark for current directory  |
-| `'` | Open bookmark selection menu (apostrophe) |
-| `d` | Open disk/drive selection panel     |
+| `/` | Enter search mode — configurable: `search`  |
+| `m` | Create bookmark — configurable: `create_bookmark` |
+| `'` | Open bookmark selection — configurable: `select_bookmark` |
+| `d` | Open disk/drive selection — configurable: `select_disk` |
 
 ### Exit
 
 | Key   | Action                                        |
 |-------|-----------------------------------------------|
-| `q`   | Exit and cd to selected directory             |
-| `Esc` | Exit without directory change                 |
+| `q`   | Exit and cd to selected directory — configurable: `quit` |
+| `Esc` | Exit without directory change — configurable: `exit` |
 
 ## Search Mode
 
@@ -144,11 +144,11 @@ After pressing `d` in tree mode:
 
 ## Context-Specific Behavior
 
-### `Esc` Key
+### `exit` key (`Esc` by default)
 
 | Context              | Action                         |
 |----------------------|--------------------------------|
-| Tree mode            | Exit bmrk                      |
+| Tree mode            | Exit bmrk without output       |
 | Search input mode    | Cancel search                  |
 | Search results       | Close results panel            |
 | Bookmark creation    | Cancel creation                |
@@ -166,30 +166,46 @@ After pressing `d` in tree mode:
 | Bookmark selection   | Jump to selected bookmark               |
 | Disk selection       | Navigate to selected disk root          |
 
-### `q` Key
+### `quit` key (`q` by default)
 
 | Context              | Action                                     |
 |----------------------|--------------------------------------------|
 | Tree mode            | Exit and cd to selected directory          |
 | Search results       | Exit and cd to selected result's directory |
 | Bookmark selection (navigation mode) | Exit and cd to selected bookmark |
+| Disk selection       | Exit and cd to selected disk root          |
 
-`q` does not exit when bookmark filter mode is active (typed text goes to the filter instead).
+`quit` does not exit when bookmark filter mode is active — typed text goes to the filter instead.
 
 ## Keybinding Customization
 
-The following keys can be customized in the `[keybindings]` section of `config.toml`:
+All major keys can be remapped in the `[keybindings]` section of `config.toml`:
 
 ```toml
 [keybindings]
+# Navigation
+go_to_parent = ["u"]          # Go to parent directory
+go_back      = ["Backspace"]  # Go back (undo last navigation)
+
+# Exit
+quit = ["q"]    # Exit and output selected path (triggers cd in shell)
+exit = ["Esc"]  # Exit without output / cancel current mode
+
+# Panels
 search          = ["/"]
 create_bookmark = ["m"]
 select_bookmark = ["'"]
 select_disk     = ["d"]
 ```
 
-Navigation keys (`j`, `k`, `h`, `l`, arrow keys, `Enter`, `Esc`, `Backspace`, `u`) and
-mode-specific keys (`Tab`, `d` for deletion) are hardcoded.
+Each field accepts a list — multiple keys can trigger the same action:
+
+```toml
+go_back = ["Backspace", "b"]   # Backspace or b to go back
+quit    = ["q", "Q"]           # Both q and Q quit with output
+```
+
+Keys not remappable: `j`/`k` (move up/down), `h`/`l` (collapse/expand), `Enter`, `Tab`, arrow keys, and `d` (deletion inside bookmark selection).
 
 ## Quick Reference Card
 
