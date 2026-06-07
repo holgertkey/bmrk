@@ -31,8 +31,8 @@ k or ↑        Move up
 l or →        Expand directory
 h or ←        Collapse directory; go to parent if already collapsed
 Enter         Change root to selected directory
-u             Go back (undo last navigation)
-Backspace     Go to parent directory
+u             Go to parent directory
+Backspace     Go back (undo last navigation)
 q             Exit and cd to selected directory
 Esc           Exit without changing directory
 ```

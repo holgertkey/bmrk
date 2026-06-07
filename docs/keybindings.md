@@ -20,8 +20,8 @@ Default mode when bmrk launches.
 | `l` or `→`  | Expand directory (show subdirectories)                                   |
 | `h` or `←`  | Collapse expanded directory; if already collapsed, move to parent        |
 | `Enter`     | Change root to selected directory                                        |
-| `u`         | Go back (undo last navigation)                                           |
-| `Backspace` | Go to parent directory (change root)                                     |
+| `u`         | Go to parent directory (change root)                                     |
+| `Backspace` | Go back (undo last navigation)                                           |
 
 ### Other Actions
 

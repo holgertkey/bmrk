@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - `max_name_length` default value changed from `30` to `80`.
+- `u` and `Backspace` key roles swapped: `u` now goes to the parent directory (change root); `Backspace` now goes back (undo last navigation — pops history).
 
 ### Fixed
 - **Add bookmark** menu: spaces are now ignored in the bookmark name input field.
@@ -23,16 +24,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Leaf directories (no visible children) no longer show the `>` expand arrow and cannot be expanded.
 
 ### Added
-- Navigation history (`u` key): each `Enter`, bookmark jump, disk selection, and `Backspace`
-  push the current root to a 50-entry history stack; `u` pops and returns to the previous root
+- Navigation history (`Backspace` key): each `Enter`, bookmark jump, disk selection, and `u`
+  push the current root to a 50-entry history stack; `Backspace` pops and returns to the previous root
   (undo last navigation). Failed navigations do not push to history.
 
 ### Changed
 - `h` / `←` now follows ranger-style behavior: collapses an expanded directory when on it;
   if the directory is already collapsed (or cursor is on a file), moves selection to the parent
   node and collapses it. At the tree root (depth 0) it still navigates up to the parent directory.
-- `u` repurposed from "go to parent" to "go back" (navigation history undo). Use `Backspace`
-  to go to the parent directory as before.
+- `Backspace` repurposed from "go to parent" to "go back" (navigation history undo). Use `u`
+  to go to the parent directory.
 
 - Tree view header now shows item position counter `(current/total)` in the same style as
   the path, matching the `Disks (1/5)` pattern in disk selection mode

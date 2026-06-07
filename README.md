@@ -232,8 +232,8 @@ bm -h / --help              # Print help
 | `k` / `↑`        | Move up                        |
 | `l` / `→`        | Expand directory               |
 | `h` / `←`        | Collapse directory; go to parent if already collapsed |
-| `u`              | Go back (undo last navigation) |
-| `Backspace`      | Go to parent directory         |
+| `u`              | Go to parent directory         |
+| `Backspace`      | Go back (undo last navigation) |
 | `Enter`          | Go into directory (change root)|
 | `q`              | Exit and cd to selected dir    |
 | `Esc`            | Exit without cd                |

@@ -7,7 +7,7 @@ Visual demonstrations of bmrk features and functionality.
 ## Tree Navigation
 
 Navigate through directories with vim-style keybindings. Expand/collapse with `l`/`h`,
-move with `j`/`k`, enter directories with `Enter`, go back with `u`.
+move with `j`/`k`, enter directories with `Enter`, go to parent with `u`, go back with `Backspace`.
 
 ![Tree Navigation Demo](assets/tree_navigation.gif)
 
@@ -43,7 +43,7 @@ jump instantly with `bm bookmarkname` or via the selection menu (`'`).
 - ✅ Vim-style keybindings (j/k/h/l)
 - ✅ Tree expansion/collapse
 - ✅ Directory traversal and root change (Enter)
-- ✅ Navigation history and undo (u/Backspace)
+- ✅ Navigation history and undo (Backspace/u)
 - ✅ Disk/drive selection (d)
 
 ### Search

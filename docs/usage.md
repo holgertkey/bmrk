@@ -66,12 +66,12 @@ h or ←        Collapse expanded directory; if already collapsed, go to parent
 
 ```
 Enter         Change root to selected directory
-u             Go back (undo last navigation — pops history)
-Backspace     Go to parent directory (change root)
+u             Go to parent directory (change root)
+Backspace     Go back (undo last navigation — pops history)
 ```
 
 When you press `Enter` on a directory, it becomes the new root of the tree.
-`u` undoes any previous navigation (Enter, bookmark jump, disk change, or Backspace). History holds up to 50 entries.
+`Backspace` undoes any previous navigation (Enter, bookmark jump, disk change, or `u`). History holds up to 50 entries.
 
 ### Example Navigation Flow
 
@@ -81,7 +81,7 @@ bm ~
 
 # Navigate to a subdirectory:
 # j/k to move, l to expand, Enter to enter
-# Backspace to go up, u to go back
+# u to go up to parent, Backspace to go back
 ```
 
 ## Exiting

@@ -312,10 +312,10 @@ impl EventHandler {
                 }
             }
             KeyCode::Char('u') => {
-                nav.go_back(false)?;
+                nav.go_to_parent(false)?;
             }
             KeyCode::Backspace => {
-                nav.go_to_parent(false)?;
+                nav.go_back(false)?;
             }
             _ if config.keybindings.is_create_bookmark(key.code) => {
                 bookmarks.enter_creation_mode();

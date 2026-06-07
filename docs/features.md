@@ -18,7 +18,7 @@ to its exact pre-launch state on exit, with no artifacts.
 
 Visual directory tree with vim-style navigation.
 
-**Key bindings**: `j`/`k` (up/down), `l` (expand), `h` (collapse/parent), `Enter` (change root), `u` (go back), `Backspace` (parent)
+**Key bindings**: `j`/`k` (up/down), `l` (expand), `h` (collapse/parent), `Enter` (change root), `u` (parent), `Backspace` (go back)
 
 **Features**:
 - Lazy loading of directory contents (loaded only when expanded)
