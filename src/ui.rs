@@ -181,6 +181,12 @@ impl UI {
 
         // --- Header ---
         let root_path = nav.root.borrow().path.display().to_string();
+        let header_path_color = Config::parse_color(Config::get_color(
+            &config.appearance.colors.header_path_color,
+        ));
+        let header_hints_color = Config::parse_color(Config::get_color(
+            &config.appearance.colors.header_hints_color,
+        ));
 
         if disks.is_selecting {
             let hints = "  jk:select  Enter:go  Esc:cancel";
@@ -201,10 +207,10 @@ impl UI {
                     Span::styled(
                         label_display,
                         Style::default()
-                            .fg(Color::Cyan)
+                            .fg(header_path_color)
                             .add_modifier(Modifier::BOLD),
                     ),
-                    Span::styled(hints, Style::default().fg(Color::DarkGray)),
+                    Span::styled(hints, Style::default().fg(header_hints_color)),
                 ])),
                 header_area,
             );
@@ -238,10 +244,10 @@ impl UI {
                     Span::styled(
                         label_display,
                         Style::default()
-                            .fg(Color::Cyan)
+                            .fg(header_path_color)
                             .add_modifier(Modifier::BOLD),
                     ),
-                    Span::styled(hints, Style::default().fg(Color::DarkGray)),
+                    Span::styled(hints, Style::default().fg(header_hints_color)),
                 ])),
                 header_area,
             );
@@ -274,10 +280,10 @@ impl UI {
                     Span::styled(
                         label_display,
                         Style::default()
-                            .fg(Color::Cyan)
+                            .fg(header_path_color)
                             .add_modifier(Modifier::BOLD),
                     ),
-                    Span::styled(hints, Style::default().fg(Color::DarkGray)),
+                    Span::styled(hints, Style::default().fg(header_hints_color)),
                 ])),
                 header_area,
             );
@@ -322,16 +328,16 @@ impl UI {
                     Span::styled(
                         path_display,
                         Style::default()
-                            .fg(Color::Cyan)
+                            .fg(header_path_color)
                             .add_modifier(Modifier::BOLD),
                     ),
                     Span::styled(
                         count_str,
                         Style::default()
-                            .fg(Color::Cyan)
+                            .fg(header_path_color)
                             .add_modifier(Modifier::BOLD),
                     ),
-                    Span::styled(hints, Style::default().fg(Color::DarkGray)),
+                    Span::styled(hints, Style::default().fg(header_hints_color)),
                 ])),
                 header_area,
             );

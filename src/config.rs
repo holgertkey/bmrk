@@ -283,6 +283,8 @@ impl Config {
         resolve_color!(cursor_color);
         resolve_color!(tree_cursor_color);
         resolve_color!(tree_cursor_bg_color);
+        resolve_color!(header_path_color);
+        resolve_color!(header_hints_color);
 
         Ok(config)
     }
@@ -325,6 +327,8 @@ icons = "unicode"
 # cursor_color = "yellow"
 # tree_cursor_color = "dim"
 # tree_cursor_bg_color = "dim"
+# header_path_color = "cyan"
+# header_hints_color = "darkgray"
 
 [behavior]
 # Show hidden files (dotfiles)

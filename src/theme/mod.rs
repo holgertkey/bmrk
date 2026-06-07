@@ -41,6 +41,13 @@ pub struct ThemeConfig {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tree_cursor_bg_color: Option<String>,
 
+    /// Color for the path/label in the header row
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub header_path_color: Option<String>,
+
+    /// Color for the key hints in the header row
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub header_hints_color: Option<String>,
 }
 
 impl ThemeConfig {
@@ -103,6 +110,8 @@ impl ThemeConfig {
             cursor_color: Some("yellow".to_string()),
             tree_cursor_color: Some("dim".to_string()),
             tree_cursor_bg_color: Some("dim".to_string()),
+            header_path_color: Some("cyan".to_string()),
+            header_hints_color: Some("darkgray".to_string()),
         }
     }
 }

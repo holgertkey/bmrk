@@ -24,6 +24,8 @@ fn default_theme() -> ThemeConfig {
         cursor_color: Some("yellow".to_string()),
         tree_cursor_color: Some("dim".to_string()),
         tree_cursor_bg_color: Some("dim".to_string()),
+        header_path_color: Some("cyan".to_string()),
+        header_hints_color: Some("darkgray".to_string()),
     }
 }
 
@@ -38,6 +40,8 @@ fn gruvbox_theme() -> ThemeConfig {
         cursor_color: Some("#fabd2f".to_string()),   // yellow for search & bookmarks
         tree_cursor_color: Some("#ebdbb2".to_string()), // light foreground text
         tree_cursor_bg_color: Some("#303030".to_string()), // barely visible darker background
+        header_path_color: Some("#fe8019".to_string()), // bright orange
+        header_hints_color: Some("#928374".to_string()), // warm gray
     }
 }
 
@@ -52,6 +56,8 @@ fn nord_theme() -> ThemeConfig {
         cursor_color: Some("#ebcb8b".to_string()),   // yellow for search & bookmarks
         tree_cursor_color: Some("#eceff4".to_string()), // snow white text
         tree_cursor_bg_color: Some("#343a48".to_string()), // barely visible lighter background
+        header_path_color: Some("#88c0d0".to_string()), // frost cyan
+        header_hints_color: Some("#616e88".to_string()), // muted polar night
     }
 }
 
@@ -66,6 +72,8 @@ fn tokyonight_theme() -> ThemeConfig {
         cursor_color: Some("#bb9af7".to_string()),    // purple for search & bookmarks
         tree_cursor_color: Some("#a9b1d6".to_string()), // light gray-blue text
         tree_cursor_bg_color: Some("#1f202e".to_string()), // barely visible lighter background
+        header_path_color: Some("#7aa2f7".to_string()), // blue
+        header_hints_color: Some("#565f89".to_string()), // comment gray
     }
 }
 
@@ -80,6 +88,8 @@ fn dracula_theme() -> ThemeConfig {
         cursor_color: Some("#bd93f9".to_string()),    // purple for search & bookmarks
         tree_cursor_color: Some("#f8f8f2".to_string()), // white text
         tree_cursor_bg_color: Some("#2d2f3d".to_string()), // barely visible lighter background
+        header_path_color: Some("#ff79c6".to_string()), // pink
+        header_hints_color: Some("#6272a4".to_string()), // comment gray
     }
 }
 
@@ -94,5 +104,7 @@ fn obsidian_theme() -> ThemeConfig {
         cursor_color: Some("#a88bfa".to_string()),   // purple for search & bookmarks
         tree_cursor_color: Some("#dcddde".to_string()), // light gray text
         tree_cursor_bg_color: Some("#1e1e21".to_string()), // barely visible dark background
+        header_path_color: Some("#a88bfa".to_string()), // soft purple
+        header_hints_color: Some("#5a5a5e".to_string()), // muted gray
     }
 }
