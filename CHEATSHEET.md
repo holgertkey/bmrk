@@ -129,16 +129,25 @@ bm work                     # Jump to bookmark
 ```toml
 [appearance]
 theme = "default"       # default, gruvbox, nord, tokyonight, dracula, obsidian
-max_name_length = 30    # Truncate long names (0 = disabled)
+max_name_length = 80    # Truncate long names in middle (0 = disabled)
+icons = "unicode"       # "unicode" (▼▶) or "ascii" (v>)
 
 [appearance.colors]
-selected_color = "cyan"
-directory_color = "blue"
+# selected_color = "cyan"          # Search bar / bookmark input text
+# directory_color = "gray"         # Directory names; header icon (▼)
+# file_color = "white"             # File names and list items
+# error_color = "red"              # Errors and deletion markers
+# highlight_color = "yellow"       # Matched chars in search results
+# cursor_color = "yellow"          # Cursor in search/bookmark/disk lists
+# tree_cursor_color = "dim"        # Cursor color in the tree
+# tree_cursor_bg_color = "dim"     # Cursor background in the tree
+# header_path_color = "cyan"       # Path/label in the header row
+# header_hints_color = "darkgray"  # Key hints in the header row
 
 [behavior]
 show_hidden = true
 follow_symlinks = true
-mouse_scroll_lines = 3
+mouse_scroll_lines = 1
 
 [keybindings]
 search = ["/"]

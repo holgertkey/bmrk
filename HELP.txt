@@ -119,7 +119,10 @@ CONFIGURATION
 
   On first run, this file is created automatically with default values.
   You can edit it to customize:
-    • Appearance (theme, colors, max filename length)
+    • Appearance (theme, icons, max filename length, custom colors)
+        Colors: directory_color, header_path_color, header_hints_color,
+                selected_color, file_color, error_color, highlight_color,
+                cursor_color, tree_cursor_color, tree_cursor_bg_color
     • Behavior (show hidden files, follow symlinks, mouse scroll speed)
     • Keybindings (customize keyboard shortcuts)
 

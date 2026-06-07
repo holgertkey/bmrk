@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `header_path_color` config field: color for the path, count, and mode labels in the header row (default: `"cyan"`).
+- `header_hints_color` config field: color for the key hint text in the header row (default: `"darkgray"`).
+- Both fields are supported in all six built-in theme presets.
+
+### Changed
+- Header icon (`▼`/`v`) now uses `directory_color` instead of a hardcoded green, so it always matches the tree folder color.
+
+### Removed
+- `border_color`, `main_border_color`, `panel_border_color`, `background_color`, `file_search_highlight_color` color fields removed — they were defined and resolved but never applied to any widget in the compact UI.
+
+### Added
 - `icons` setting in `[appearance]` config: `"unicode"` (default, `▼`/`▶`) or `"ascii"` (`v`/`>`).
 - **Add bookmark** menu: header now shows the path of the folder being bookmarked instead of the navigation root.
 - **Add bookmark** menu: existing bookmark keys are listed on a single comma-separated line (wraps at `max_name_length` columns) instead of a multi-line list.

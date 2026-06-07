@@ -35,13 +35,16 @@ max_name_length = 80
 [appearance.colors]
 # Override individual theme colors
 # Formats: color name ("cyan"), RGB hex ("#00FFFF"), or indexed (0-255)
-# selected_color = "cyan"
-# directory_color = "blue"
-# border_color = "gray"
-# error_color = "red"
-# highlight_color = "yellow"
-# header_color = "white"
-# search_highlight_color = "yellow"
+# selected_color = "cyan"         # Search bar and bookmark input text
+# directory_color = "gray"        # Directory names in the tree; also the header icon (▼)
+# file_color = "white"            # File names and list items
+# error_color = "red"             # Error messages and deletion markers
+# highlight_color = "yellow"      # Matched characters in search results
+# cursor_color = "yellow"         # Selected item in search/bookmark/disk lists
+# tree_cursor_color = "dim"       # Selected item color in the tree
+# tree_cursor_bg_color = "dim"    # Selected item background in the tree
+# header_path_color = "cyan"      # Path and mode labels in the header row
+# header_hints_color = "darkgray" # Key hint text in the header row
 
 [behavior]
 # Show hidden files (dotfiles) — default: true
@@ -88,11 +91,27 @@ Override individual colors within any theme. Three formats are supported:
 [appearance.colors]
 selected_color = "cyan"        # Color name
 directory_color = "#569CD6"    # RGB hex
-border_color = "240"           # Indexed (0-255)
+cursor_color = "240"           # Indexed (0-255)
 ```
 
+Available color fields:
+
+| Field | Default | What it colors |
+|---|---|---|
+| `selected_color` | `"cyan"` | Search bar and bookmark input text |
+| `directory_color` | `"gray"` | Directory names in the tree; also the header icon (▼) |
+| `file_color` | `"white"` | File names and list items |
+| `error_color` | `"red"` | Error messages and deletion markers |
+| `highlight_color` | `"yellow"` | Matched characters in search results |
+| `cursor_color` | `"yellow"` | Selected item in search/bookmark/disk lists |
+| `tree_cursor_color` | `"dim"` | Selected item color in the tree |
+| `tree_cursor_bg_color` | `"dim"` | Selected item background in the tree |
+| `header_path_color` | `"cyan"` | Path and mode labels in the header row |
+| `header_hints_color` | `"darkgray"` | Key hint text in the header row |
+
 Available color names: `black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`,
-`gray`, `light_red`, `light_green`, `light_yellow`, `light_blue`, `light_magenta`, `light_cyan`.
+`gray`, `darkgray`, `lightred`, `lightgreen`, `lightyellow`, `lightblue`, `lightmagenta`, `lightcyan`,
+or `"reset"` (terminal default).
 
 ### Icon Style
 
@@ -202,7 +221,7 @@ max_name_length = 60
 [appearance.colors]
 selected_color = "#00FFFF"
 directory_color = "#569CD6"
-border_color = "#404040"
+header_hints_color = "#404040"
 
 [behavior]
 show_hidden = true

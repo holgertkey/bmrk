@@ -256,12 +256,19 @@ Bookmarks are stored as `bookmarks.json` in the same directory.
 ```toml
 [appearance]
 theme = "default"       # default, gruvbox, nord, tokyonight, dracula, obsidian
-max_name_length = 30    # Truncate long names in the middle (0 = disabled)
+max_name_length = 80    # Truncate long names in the middle (0 = disabled)
+icons = "unicode"       # "unicode" (▼▶) or "ascii" (v>)
+
+[appearance.colors]
+# header_path_color = "cyan"       # Path/label in the header row
+# header_hints_color = "darkgray"  # Key hints in the header row
+# directory_color = "gray"         # Directory names; also the header icon (▼)
+# See docs/configuration.md for all available color fields
 
 [behavior]
 show_hidden = true
 follow_symlinks = true
-mouse_scroll_lines = 3
+mouse_scroll_lines = 1
 
 [keybindings]
 search = ["/"]
