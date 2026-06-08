@@ -75,6 +75,8 @@ pub struct UI {
     /// Scroll offset of the disk list, updated each render when disk selection is active.
     pub disk_scroll_offset: usize,
     pub bottom_panel_height: u16,
+    /// Visible row count of the bookmark list in creation mode, set each render.
+    pub bookmark_panel_height: usize,
 }
 
 impl Default for UI {
@@ -96,6 +98,7 @@ impl UI {
             tree_scroll_offset: 0,
             disk_scroll_offset: 0,
             bottom_panel_height: 0,
+            bookmark_panel_height: 0,
         }
     }
 
@@ -494,6 +497,7 @@ impl UI {
                 );
             }
         } else if bookmarks.is_creating {
+            self.bookmark_panel_height = body_area.height as usize;
             let all_bookmarks = bookmarks.list();
             let file_color =
                 Config::parse_color(Config::get_color(&config.appearance.colors.file_color));

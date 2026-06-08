@@ -517,7 +517,7 @@ impl EventHandler {
                 return Ok(());
             }
             if bookmarks.is_creating {
-                let max_visible = 10;
+                let max_visible = ui.bookmark_panel_height.max(1);
                 bookmarks.scroll_down(max_visible);
                 return Ok(());
             }
