@@ -1,7 +1,7 @@
 use crate::tree_node::{TreeNode, TreeNodeRef};
 use anyhow::Result;
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
@@ -13,7 +13,7 @@ pub struct Navigation {
     pub show_hidden: bool,
     pub follow_symlinks: bool,
     /// History stack of previously visited root paths for back-navigation (`u`).
-    pub history: Vec<PathBuf>,
+    pub history: VecDeque<PathBuf>,
     /// Last navigation error message, shown in the UI header until the next successful navigation.
     pub nav_error: Option<String>,
     // Performance optimization: HashMap for O(1) path lookup
@@ -38,7 +38,7 @@ impl Navigation {
             selected: 0,
             show_hidden,
             follow_symlinks,
-            history: Vec::new(),
+            history: VecDeque::new(),
             nav_error: None,
             path_to_index: HashMap::new(),
         };
@@ -280,7 +280,7 @@ impl Navigation {
     /// Navigate back to the previous root in history.
     /// Returns `true` if navigation occurred, `false` if history is empty.
     pub fn go_back(&mut self, show_files: bool) -> Result<bool> {
-        let Some(prev_path) = self.history.pop() else {
+        let Some(prev_path) = self.history.pop_back() else {
             return Ok(false);
         };
 
@@ -301,9 +301,9 @@ impl Navigation {
     /// Push path to history, capping at 50 entries.
     fn push_history(&mut self, path: PathBuf) {
         if self.history.len() >= 50 {
-            self.history.remove(0);
+            self.history.pop_front();
         }
-        self.history.push(path);
+        self.history.push_back(path);
     }
 
     /// Navigate to arbitrary directory (for bookmarks).
