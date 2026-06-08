@@ -696,7 +696,10 @@ mod tests {
         let r1: std::io::Result<()> = Err(std::io::Error::other("unsupported platform"));
 
         if r1.is_err() {
-            eprintln!("test_symlink_cycle_does_not_hang: SKIPPED (symlink creation failed: {:?})", r1);
+            eprintln!(
+                "test_symlink_cycle_does_not_hang: SKIPPED (symlink creation failed: {:?})",
+                r1
+            );
             let _ = std::fs::remove_dir_all(&test_dir);
             return;
         }
@@ -711,7 +714,10 @@ mod tests {
         let r2: std::io::Result<()> = Err(std::io::Error::other("unsupported platform"));
 
         if r2.is_err() {
-            eprintln!("test_symlink_cycle_does_not_hang: SKIPPED (second symlink failed: {:?})", r2);
+            eprintln!(
+                "test_symlink_cycle_does_not_hang: SKIPPED (second symlink failed: {:?})",
+                r2
+            );
             let _ = std::fs::remove_dir_all(&test_dir);
             return;
         }
@@ -739,7 +745,10 @@ mod tests {
         }
 
         let elapsed = start.elapsed();
-        eprintln!("test_symlink_cycle_does_not_hang: completed in {:?}", elapsed);
+        eprintln!(
+            "test_symlink_cycle_does_not_hang: completed in {:?}",
+            elapsed
+        );
 
         assert!(
             !search.is_active(),
