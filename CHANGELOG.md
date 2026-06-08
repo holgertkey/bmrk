@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `terminal.rs`: raw mode leaked when `setup_terminal_compact` failed after `enable_raw_mode`
   (e.g. `EnableMouseCapture` error). Fixed with an `OnErrGuard` RAII type that disables raw mode
   on any error path; disarmed on success so normal teardown via `cleanup_terminal_compact` is unchanged.
+- `platform.rs`: on Windows, `is_absolute_path("subdir\\child")` incorrectly returned `true`
+  because any path containing `\` was treated as absolute. Now only drive-letter paths (`C:\`)
+  and UNC paths (`\\server\share`) are recognized as absolute.
 
 ## [0.1.0] - 2026-06-07
 

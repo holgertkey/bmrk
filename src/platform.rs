@@ -55,14 +55,11 @@ pub fn is_absolute_path(path: &str) -> bool {
 
 #[cfg(windows)]
 pub fn is_absolute_path(path: &str) -> bool {
-    // Windows: C:\, D:\, \\server\share (UNC), or contains path separator
+    // Windows: drive-letter paths (C:\) or UNC paths (\\server\share).
+    // A path that merely contains '\' (e.g. "subdir\child") is NOT absolute.
     path.len() >= 2
-        && (
-            (path.chars().nth(1) == Some(':')) ||  // C:\, D:\
-        path.starts_with("\\\\") ||             // \\server\share
-        path.contains(std::path::MAIN_SEPARATOR)
-            // Any path with separators
-        )
+        && ((path.chars().nth(1) == Some(':')) // C:\, D:\
+            || path.starts_with("\\\\")) // \\server\share
 }
 
 /// Normalize path separators for the current platform
@@ -120,7 +117,8 @@ mod tests {
             assert!(is_absolute_path("C:\\Users\\user"));
             assert!(is_absolute_path("D:\\Projects"));
             assert!(is_absolute_path("\\\\server\\share"));
-            assert!(is_absolute_path("relative\\path"));
+            assert!(!is_absolute_path("relative\\path")); // backslash alone does not make it absolute
+            assert!(!is_absolute_path("subdir\\child"));
             assert!(!is_absolute_path("relative"));
         }
     }
