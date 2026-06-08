@@ -473,12 +473,23 @@ impl UI {
 
                 let visible = body_area.height as usize;
                 let total = filtered.len();
-                let offset = if bookmarks.selected_index < visible / 2 {
-                    0
-                } else if bookmarks.selected_index >= total.saturating_sub(visible / 2) {
-                    total.saturating_sub(visible)
+                let offset = if bookmarks.center_selection {
+                    if bookmarks.selected_index < visible / 2 {
+                        0
+                    } else if bookmarks.selected_index >= total.saturating_sub(visible / 2) {
+                        total.saturating_sub(visible)
+                    } else {
+                        bookmarks.selected_index.saturating_sub(visible / 2)
+                    }
                 } else {
-                    bookmarks.selected_index.saturating_sub(visible / 2)
+                    let current = self.bookmark_scroll_offset;
+                    if bookmarks.selected_index < current {
+                        bookmarks.selected_index
+                    } else if visible > 0 && bookmarks.selected_index >= current + visible {
+                        bookmarks.selected_index.saturating_sub(visible - 1)
+                    } else {
+                        current
+                    }
                 };
                 *state.offset_mut() = offset;
                 self.bookmark_scroll_offset = offset;

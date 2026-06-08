@@ -61,6 +61,8 @@ pub struct Bookmarks {
     filtered_keys: Vec<String>,                // Cached filtered bookmark keys
     pub scroll_offset: usize,                  // Scroll offset for bookmark list in creation mode
     pub pending_deletion_index: Option<usize>, // Index of bookmark marked for deletion
+    /// `true` after keyboard navigation (center in viewport); `false` after mouse (minimal scroll).
+    pub center_selection: bool,
 }
 
 impl Bookmarks {
@@ -86,6 +88,7 @@ impl Bookmarks {
             filtered_keys: Vec::new(),
             scroll_offset: 0,
             pending_deletion_index: None,
+            center_selection: false,
         };
 
         // Try to load, but don't fail if JSON is corrupted
@@ -215,6 +218,7 @@ impl Bookmarks {
         self.selected_index = 0;
         self.filter_mode = false;
         self.pending_deletion_index = None;
+        self.center_selection = false;
         self.update_filtered_list();
     }
 
@@ -226,6 +230,7 @@ impl Bookmarks {
         self.filter_mode = false;
         self.filtered_keys.clear();
         self.pending_deletion_index = None;
+        self.center_selection = false;
     }
 
     /// Enter bookmark creation mode (after pressing 'm')
@@ -352,8 +357,8 @@ impl Bookmarks {
         if self.selected_index > 0 {
             self.selected_index -= 1;
         }
-        // Clear pending deletion when navigating
         self.pending_deletion_index = None;
+        self.center_selection = true;
     }
 
     /// Move selection down in bookmark list
@@ -362,8 +367,8 @@ impl Bookmarks {
         if list_len > 0 && self.selected_index < list_len - 1 {
             self.selected_index += 1;
         }
-        // Clear pending deletion when navigating
         self.pending_deletion_index = None;
+        self.center_selection = true;
     }
 
     /// Get currently selected bookmark
@@ -431,6 +436,7 @@ mod tests {
             filtered_keys: Vec::new(),
             scroll_offset: 0,
             pending_deletion_index: None,
+            center_selection: false,
         }
     }
 
@@ -498,6 +504,7 @@ mod tests {
             filtered_keys: Vec::new(),
             scroll_offset: 0,
             pending_deletion_index: None,
+            center_selection: false,
         };
 
         let result = bookmarks.load();
@@ -557,6 +564,7 @@ mod tests {
             filtered_keys: Vec::new(),
             scroll_offset: 0,
             pending_deletion_index: None,
+            center_selection: false,
         };
 
         // Should load without error

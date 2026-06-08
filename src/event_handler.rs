@@ -456,6 +456,7 @@ impl EventHandler {
                         self.last_click_time = None;
                     } else {
                         bookmarks.selected_index = clicked_idx;
+                        bookmarks.center_selection = false;
                         self.last_click_time = Some((now, clicked_idx));
                     }
                 }
@@ -516,6 +517,7 @@ impl EventHandler {
         }
         if bookmarks.is_selecting {
             bookmarks.move_up();
+            bookmarks.center_selection = false;
             return Ok(());
         }
         // Bottom panel scrolling (search/bookmark-create in non-compact layout)
@@ -552,6 +554,7 @@ impl EventHandler {
         }
         if bookmarks.is_selecting {
             bookmarks.move_down();
+            bookmarks.center_selection = false;
             return Ok(());
         }
         if ui.bottom_panel_height > 0 {
