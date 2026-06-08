@@ -45,6 +45,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `max_visible = 10`, making entries below the 10th unreachable in compact mode (which shows ~4–5
   rows). `UI::bookmark_panel_height` is now updated from the actual rendered area height each frame
   and passed to `bookmarks.scroll_down()`.
+- `navigation.rs` / `ui.rs`: clicking an item caused the view to re-center on it, forcing the user
+  to re-aim the mouse for a double-click. Mouse actions (click, scroll wheel) now use minimal
+  scrolling — the view only moves if the selection leaves the visible area. Keyboard navigation
+  still centers the selection. Controlled by `Navigation::center_selection`.
 
 ## [0.1.0] - 2026-06-07
 

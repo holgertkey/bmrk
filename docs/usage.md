@@ -216,14 +216,14 @@ The panel shows each disk with its mount point, filesystem type, free space, and
 ### Clicking
 
 ```
-Click         Select item
+Click         Select item (view stays in place — double-click lands at the same position)
 Double-click  Expand/collapse directory
 ```
 
 ### Scrolling
 
 ```
-Scroll wheel  Navigate tree
+Scroll wheel  Navigate tree (view shifts only when selection reaches the edge)
 ```
 
 ## Tips for Efficient Usage

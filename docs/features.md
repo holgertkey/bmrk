@@ -80,9 +80,9 @@ Browse and switch between all available drives and mount points.
 Basic mouse interaction.
 
 **Features**:
-- Click to select items
+- Click to select items — the view does not scroll, so double-clicking lands on the same position
 - Double-click to expand/collapse directories
-- Scroll wheel to navigate tree
+- Scroll wheel to navigate tree — view scrolls only when selection reaches the edge
 
 ## Configuration System
 

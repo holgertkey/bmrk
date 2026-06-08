@@ -103,7 +103,9 @@ Manages the directory tree state:
 - `root: TreeNodeRef` — current root node
 - `flat_list: Vec<TreeNodeRef>` — visible nodes in display order
 - `selected: usize` — cursor position
-- `history: Vec<PathBuf>` — undo stack (up to 50 entries)
+- `history: VecDeque<PathBuf>` — undo stack (up to 50 entries)
+- `center_selection: bool` — scroll hint for the renderer: `true` centers the selection
+  (keyboard navigation), `false` uses minimal scrolling (mouse actions)
 
 Key methods: `go_back()` (undo), `go_to_parent()`, `change_root()`, `rebuild_flat_list()`.
 
