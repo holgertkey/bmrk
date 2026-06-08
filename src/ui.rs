@@ -653,6 +653,8 @@ impl UI {
             // Normal tree items
             let dir_color =
                 Config::parse_color(Config::get_color(&config.appearance.colors.directory_color));
+            let error_color =
+                Config::parse_color(Config::get_color(&config.appearance.colors.error_color));
 
             let items: Vec<ListItem> = nav
                 .flat_list
@@ -661,7 +663,13 @@ impl UI {
                     let n = node.borrow();
                     let indent = "  ".repeat(n.depth);
                     let unicode_icons = config.appearance.icons != "ascii";
-                    let icon = if n.is_dir {
+                    let icon = if n.has_error {
+                        if unicode_icons {
+                            "⊘ "
+                        } else {
+                            "! "
+                        }
+                    } else if n.is_dir {
                         if n.is_expanded {
                             if unicode_icons {
                                 "▼ "
@@ -681,7 +689,9 @@ impl UI {
                     let display_name =
                         truncate_name_middle(&n.name, config.appearance.max_name_length);
                     let text = format!("{}{}{}", indent, icon, display_name);
-                    let style = if n.is_dir {
+                    let style = if n.has_error {
+                        Style::default().fg(error_color)
+                    } else if n.is_dir {
                         Style::default().fg(dir_color)
                     } else {
                         Style::default()

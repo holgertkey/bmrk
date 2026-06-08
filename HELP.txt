@@ -135,8 +135,8 @@ CONFIGURATION
   You can edit it to customize:
     • Appearance (theme, icons, max filename length, custom colors)
         Colors: directory_color, header_path_color, header_hints_color,
-                selected_color, file_color, error_color, highlight_color,
-                cursor_color, tree_cursor_color, tree_cursor_bg_color
+                selected_color, file_color, error_color (⊘ inaccessible dirs + nav errors),
+                highlight_color, cursor_color, tree_cursor_color, tree_cursor_bg_color
     • Behavior (show hidden files, follow symlinks, mouse scroll speed)
     • Keybindings (all major keys are remappable)
         go_to_parent = ["u"]       go_back = ["Backspace"]

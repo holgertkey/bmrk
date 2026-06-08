@@ -22,7 +22,7 @@ Visual directory tree with vim-style navigation.
 
 **Features**:
 - Lazy loading of directory contents (loaded only when expanded)
-- Error tracking for inaccessible directories (⚠ indicator)
+- Inaccessible directories shown with `⊘` icon in `error_color` (detected eagerly when parent expands, not only after trying to enter)
 - Configurable hidden file visibility (`show_hidden` in config)
 - Symlink support with cycle detection (`follow_symlinks` in config)
 - Navigation history with undo (`u`) — up to 50 entries

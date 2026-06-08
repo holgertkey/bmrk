@@ -24,6 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `BTreeMap<String, Bookmark>`. `list()` now returns values in key order directly from the
   iterator (`values().collect()`), removing the per-call `sort_by_key` allocation.
 
+### Added
+- `ui.rs` / `tree_node.rs`: inaccessible directories are now visually marked in the tree with
+  a `⊘` icon (ascii: `!`) rendered in `error_color`. Detection is eager — `probe_has_children`
+  now sets `has_error` when `read_dir` fails, so the marker appears as soon as the parent
+  directory is expanded, without requiring the user to try to enter the folder.
+
 ### Fixed
 - `event_handler.rs` / `ui.rs` / `bookmarks.rs`: mouse had no effect in the bookmark selection
   panel. Single click now selects the item under the cursor, double-click navigates to the

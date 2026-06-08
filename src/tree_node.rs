@@ -58,8 +58,13 @@ impl TreeNode {
             self.has_children = Some(false);
             return;
         }
-        let Ok(entries) = fs::read_dir(&self.path) else {
-            return; // Unreadable — leave as None (unknown)
+        let entries = match fs::read_dir(&self.path) {
+            Ok(e) => e,
+            Err(e) => {
+                self.has_error = true;
+                self.error_message = Some(format!("Cannot read: {}", e));
+                return;
+            }
         };
         for entry in entries.flatten() {
             let path = entry.path();
@@ -317,5 +322,33 @@ mod tests {
 
         node.toggle_expand(false, false, false).unwrap();
         assert!(node.is_expanded);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn probe_marks_unreadable_dir_as_error() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = TempDir::new().unwrap();
+        let locked = tmp.path().join("locked");
+        std::fs::create_dir(&locked).unwrap();
+        std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o000)).unwrap();
+
+        let mut root = make_dir_node(tmp.path().to_path_buf());
+        root.load_children(false, false, false).unwrap();
+
+        // Restore permissions so TempDir cleanup doesn't fail
+        std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o755)).unwrap();
+
+        let child = root
+            .children
+            .iter()
+            .find(|c| c.borrow().name == "locked")
+            .expect("locked child must exist");
+        let child = child.borrow();
+        assert!(child.has_error, "probe must mark unreadable dir as error");
+        assert!(
+            child.error_message.is_some(),
+            "error_message must be set by probe"
+        );
     }
 }

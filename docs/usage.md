@@ -44,7 +44,7 @@ bmrk runs inline in 8 rows — it does not take over the terminal screen.
 - Tree rows: directory tree with expand/collapse indicators
 - `►` collapsed directory (has subdirectories)
 - `▼` expanded directory
-- `⚠` directory that could not be read
+- `⊘` directory that could not be read (shown in error color)
 
 ## Basic Navigation
 
