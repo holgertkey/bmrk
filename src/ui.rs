@@ -287,6 +287,33 @@ impl UI {
                 ])),
                 header_area,
             );
+        } else if let Some(ref error_msg) = nav.nav_error {
+            let hints = "  hjkl:nav  u:up  m:bmark  ':jump  d:disk  /:search  q:exit";
+            let max_msg_len = (area.width as usize).saturating_sub(hints.len() + 4).max(8);
+            let msg_display = if error_msg.len() > max_msg_len {
+                format!(
+                    "...{}",
+                    &error_msg[error_msg.len().saturating_sub(max_msg_len)..]
+                )
+            } else {
+                error_msg.clone()
+            };
+            let error_icon = if config.appearance.icons != "ascii" {
+                " ✗ "
+            } else {
+                " ! "
+            };
+            frame.render_widget(
+                Paragraph::new(Line::from(vec![
+                    Span::styled(error_icon, Style::default().fg(Color::Red)),
+                    Span::styled(
+                        msg_display,
+                        Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+                    ),
+                    Span::styled(hints, Style::default().fg(header_hints_color)),
+                ])),
+                header_area,
+            );
         } else {
             let hints = if bookmarks.is_creating {
                 "  Enter:save  Ctrl+j/k:scroll  Esc:cancel"

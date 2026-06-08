@@ -14,6 +14,8 @@ pub struct Navigation {
     pub follow_symlinks: bool,
     /// History stack of previously visited root paths for back-navigation (`u`).
     pub history: Vec<PathBuf>,
+    /// Last navigation error message, shown in the UI header until the next successful navigation.
+    pub nav_error: Option<String>,
     // Performance optimization: HashMap for O(1) path lookup
     path_to_index: HashMap<PathBuf, usize>,
 }
@@ -37,6 +39,7 @@ impl Navigation {
             show_hidden,
             follow_symlinks,
             history: Vec::new(),
+            nav_error: None,
             path_to_index: HashMap::new(),
         };
 
@@ -303,15 +306,26 @@ impl Navigation {
         self.history.push(path);
     }
 
-    /// Navigate to arbitrary directory (for bookmarks)
-    /// Returns Some(error_message) if directory cannot be accessed, None otherwise
+    /// Navigate to arbitrary directory (for bookmarks).
+    ///
+    /// Returns `Some(error_message)` when the path does not exist, is not a directory,
+    /// or cannot be read. Returns `None` on success. The error is also stored in
+    /// [`Navigation::nav_error`] and displayed in the UI header until the next
+    /// successful navigation.
     pub fn go_to_directory(
         &mut self,
         target_path: PathBuf,
         show_files: bool,
     ) -> Result<Option<String>> {
+        if !target_path.exists() {
+            let msg = format!("Directory not found: {}", target_path.display());
+            self.nav_error = Some(msg.clone());
+            return Ok(Some(msg));
+        }
         if !target_path.is_dir() {
-            return Ok(None);
+            let msg = format!("Not a directory: {}", target_path.display());
+            self.nav_error = Some(msg.clone());
+            return Ok(Some(msg));
         }
 
         // Save current state in case we need to restore it
@@ -327,13 +341,18 @@ impl Navigation {
             // Restore previous state - don't change directory
             self.root = old_root;
             self.selected = old_selected;
-            return Ok(new_root.error_message);
+            let msg = new_root.error_message.clone();
+            if let Some(ref m) = msg {
+                self.nav_error = Some(m.clone());
+            }
+            return Ok(msg);
         }
 
         // Success - record current root in history before switching
         let current_path = old_root.borrow().path.clone();
         self.push_history(current_path);
 
+        self.nav_error = None;
         self.root = Rc::new(RefCell::new(new_root));
         self.rebuild_flat_list();
         self.selected = 0;
@@ -508,10 +527,42 @@ mod tests {
         let nonexistent = root.join("does_not_exist");
 
         let mut nav = make_nav(root.clone());
-        nav.go_to_directory(nonexistent, false).unwrap();
+        let result = nav.go_to_directory(nonexistent.clone(), false).unwrap();
 
+        assert!(
+            result.is_some(),
+            "must return an error message for nonexistent path"
+        );
+        let msg = result.unwrap();
+        assert!(
+            msg.contains(nonexistent.to_str().unwrap()),
+            "error message must mention the path"
+        );
+        assert_eq!(nav.nav_error.as_deref(), Some(msg.as_str()));
         assert_eq!(nav.root.borrow().path, root, "root must not change");
         assert_eq!(nav.history.len(), 0, "history must not grow on failed nav");
+    }
+
+    #[test]
+    fn successful_navigation_clears_nav_error() {
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path().to_path_buf();
+        let child = root.join("child");
+        std::fs::create_dir(&child).unwrap();
+        let nonexistent = root.join("does_not_exist");
+
+        let mut nav = make_nav(root.clone());
+        nav.go_to_directory(nonexistent, false).unwrap();
+        assert!(
+            nav.nav_error.is_some(),
+            "error should be set after failed nav"
+        );
+
+        nav.go_to_directory(child.clone(), false).unwrap();
+        assert!(
+            nav.nav_error.is_none(),
+            "error must be cleared after successful nav"
+        );
     }
 
     #[test]
