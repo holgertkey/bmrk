@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::PathBuf;
 
@@ -51,7 +51,7 @@ impl Bookmark {
 /// Manages persistent bookmarks
 #[derive(Debug, Default)]
 pub struct Bookmarks {
-    bookmarks: HashMap<String, Bookmark>,
+    bookmarks: BTreeMap<String, Bookmark>,
     file_path: PathBuf,
     pub is_selecting: bool,
     pub is_creating: bool,
@@ -76,7 +76,7 @@ impl Bookmarks {
         let file_path = config_dir.join("bookmarks.json");
 
         let mut bookmarks = Self {
-            bookmarks: HashMap::new(),
+            bookmarks: BTreeMap::new(),
             file_path,
             is_selecting: false,
             is_creating: false,
@@ -202,11 +202,9 @@ impl Bookmarks {
         Ok(())
     }
 
-    /// Get all bookmarks as a sorted vector
+    /// Get all bookmarks sorted by key.
     pub fn list(&self) -> Vec<&Bookmark> {
-        let mut bookmarks: Vec<&Bookmark> = self.bookmarks.values().collect();
-        bookmarks.sort_by_key(|b| b.key.clone());
-        bookmarks
+        self.bookmarks.values().collect()
     }
 
     /// Enter bookmark selection mode
@@ -423,7 +421,7 @@ mod tests {
     fn create_test_bookmarks(temp_dir: &TempDir) -> Bookmarks {
         let file_path = temp_dir.path().join("bookmarks.json");
         Bookmarks {
-            bookmarks: HashMap::new(),
+            bookmarks: BTreeMap::new(),
             file_path,
             is_selecting: false,
             is_creating: false,
@@ -490,7 +488,7 @@ mod tests {
 
         // Try to load
         let mut bookmarks = Bookmarks {
-            bookmarks: HashMap::new(),
+            bookmarks: BTreeMap::new(),
             file_path: file_path.clone(),
             is_selecting: false,
             is_creating: false,
@@ -549,7 +547,7 @@ mod tests {
         std::fs::File::create(&file_path).unwrap();
 
         let mut bookmarks = Bookmarks {
-            bookmarks: HashMap::new(),
+            bookmarks: BTreeMap::new(),
             file_path,
             is_selecting: false,
             is_creating: false,
