@@ -14,6 +14,35 @@ use std::sync::atomic::{AtomicBool, AtomicU16, Ordering};
 
 use crate::app::App;
 
+/// RAII guard that runs a cleanup closure on drop unless explicitly disarmed.
+/// Used to ensure terminal state (raw mode, flags) is restored when setup fails partway through.
+struct OnErrGuard<F: FnMut()> {
+    armed: bool,
+    cleanup: F,
+}
+
+impl<F: FnMut()> OnErrGuard<F> {
+    fn new(cleanup: F) -> Self {
+        Self {
+            armed: true,
+            cleanup,
+        }
+    }
+
+    /// Disarm the guard — cleanup will NOT run on drop (setup succeeded).
+    fn disarm(&mut self) {
+        self.armed = false;
+    }
+}
+
+impl<F: FnMut()> Drop for OnErrGuard<F> {
+    fn drop(&mut self) {
+        if self.armed {
+            (self.cleanup)();
+        }
+    }
+}
+
 /// Compact mode height in rows (1 header + content rows)
 pub const COMPACT_HEIGHT: u16 = 8;
 
@@ -59,10 +88,18 @@ pub fn setup_terminal() -> Result<Terminal<CrosstermBackend<std::io::Stderr>>> {
 /// returns to its pre-launch state.
 pub fn setup_terminal_compact() -> Result<Terminal<CrosstermBackend<std::io::Stderr>>> {
     install_panic_hook();
-    IS_COMPACT_MODE.store(true, Ordering::Relaxed);
 
-    // Enable raw mode first (needed for cursor::position() on Unix)
+    // Enable raw mode first (needed for cursor::position() on Unix).
+    // If this fails we return immediately — nothing to clean up yet.
     enable_raw_mode()?;
+
+    // From here any `?` would leak raw mode. The guard ensures disable_raw_mode()
+    // is called on every error path; disarm() is called on success.
+    IS_COMPACT_MODE.store(true, Ordering::Relaxed);
+    let mut raw_guard = OnErrGuard::new(|| {
+        let _ = disable_raw_mode();
+        IS_COMPACT_MODE.store(false, Ordering::Relaxed);
+    });
 
     // Determine where our viewport will start after potential terminal scrolling.
     // Viewport::Inline(N) scrolls the terminal up if the cursor is too close to
@@ -86,6 +123,7 @@ pub fn setup_terminal_compact() -> Result<Terminal<CrosstermBackend<std::io::Std
         },
     )?;
 
+    raw_guard.disarm(); // setup complete — cleanup_terminal_compact() owns teardown from here
     Ok(terminal)
 }
 
@@ -262,5 +300,47 @@ pub fn run_app(
         if let Some(mouse) = scroll_down_event {
             let _ = app.handle_mouse(mouse);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::OnErrGuard;
+
+    #[test]
+    fn on_err_guard_fires_cleanup_when_dropped_armed() {
+        let mut calls = 0;
+        {
+            let _g = OnErrGuard::new(|| calls += 1);
+            // dropped here without disarm → cleanup must run
+        }
+        assert_eq!(calls, 1, "cleanup should run exactly once on armed drop");
+    }
+
+    #[test]
+    fn on_err_guard_skips_cleanup_when_disarmed() {
+        let mut calls = 0;
+        {
+            let mut g = OnErrGuard::new(|| calls += 1);
+            g.disarm();
+            // dropped here after disarm → cleanup must NOT run
+        }
+        assert_eq!(calls, 0, "cleanup must not run after disarm");
+    }
+
+    #[test]
+    fn on_err_guard_fires_on_early_question_mark() {
+        // Simulates the `?` path in setup_terminal_compact: armed guard drops when
+        // the enclosing function returns Err.
+        fn setup_that_fails(calls: &mut i32) -> Result<(), String> {
+            let mut guard = OnErrGuard::new(|| *calls += 1);
+            Err("injected failure".to_string())?; // guard drops here (armed)
+            guard.disarm();
+            Ok(())
+        }
+
+        let mut n = 0;
+        assert!(setup_that_fails(&mut n).is_err());
+        assert_eq!(n, 1, "cleanup must run when setup returns Err");
     }
 }

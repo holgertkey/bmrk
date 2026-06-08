@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - `search.rs`: infinite recursion (stack overflow) when background deep-search follows cyclic
   symlinks (`A → B → A`). Canonical paths are now tracked in a `HashSet` and cycles are skipped.
+- `terminal.rs`: raw mode leaked when `setup_terminal_compact` failed after `enable_raw_mode`
+  (e.g. `EnableMouseCapture` error). Fixed with an `OnErrGuard` RAII type that disables raw mode
+  on any error path; disarmed on success so normal teardown via `cleanup_terminal_compact` is unchanged.
 
 ## [0.1.0] - 2026-06-07
 
