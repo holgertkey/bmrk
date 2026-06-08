@@ -155,13 +155,19 @@ impl Bookmarks {
         }
     }
 
-    /// Save bookmarks to JSON file
+    /// Save bookmarks to JSON file (atomic: write to .tmp then rename)
     fn save(&self) -> Result<()> {
         let bookmarks_vec: Vec<&Bookmark> = self.bookmarks.values().collect();
         let json = serde_json::to_string_pretty(&bookmarks_vec)
             .context("Failed to serialize bookmarks")?;
 
-        fs::write(&self.file_path, json).context("Failed to write bookmarks file")?;
+        // Write to a sibling temp file first so an interrupted write never
+        // leaves the target file truncated or empty.
+        let tmp_path = self.file_path.with_extension("json.tmp");
+        fs::write(&tmp_path, &json).context("Failed to write temp bookmarks file")?;
+
+        // Atomic rename: on the same volume this replaces the target in one step.
+        fs::rename(&tmp_path, &self.file_path).context("Failed to rename temp bookmarks file")?;
 
         Ok(())
     }
@@ -510,6 +516,28 @@ mod tests {
 
         // Bookmarks should be empty
         assert_eq!(bookmarks.list().len(), 0);
+    }
+
+    #[test]
+    fn test_save_leaves_no_tmp_file() {
+        let temp_dir = TempDir::new().unwrap();
+        let mut bookmarks = create_test_bookmarks(&temp_dir);
+
+        bookmarks
+            .add("a".to_string(), PathBuf::from("/tmp/a"), None)
+            .unwrap();
+
+        // After a successful save the .tmp file must not remain
+        let tmp_path = bookmarks.file_path.with_extension("json.tmp");
+        assert!(
+            !tmp_path.exists(),
+            ".tmp file must not exist after successful save"
+        );
+
+        // The target file must exist and contain valid JSON
+        let content = fs::read_to_string(&bookmarks.file_path).unwrap();
+        let parsed: Vec<serde_json::Value> = serde_json::from_str(&content).unwrap();
+        assert_eq!(parsed.len(), 1);
     }
 
     #[test]

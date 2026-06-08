@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `platform.rs`: on Windows, `is_absolute_path("subdir\\child")` incorrectly returned `true`
   because any path containing `\` was treated as absolute. Now only drive-letter paths (`C:\`)
   and UNC paths (`\\server\share`) are recognized as absolute.
+- `bookmarks.rs`: `save()` used `fs::write` which truncates the file before writing; an
+  interruption between the two steps left an empty file that silently wiped all bookmarks on
+  next load. Now writes to a sibling `.json.tmp` file and renames atomically.
 
 ## [0.1.0] - 2026-06-07
 
