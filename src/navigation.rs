@@ -101,18 +101,14 @@ impl Navigation {
         self.selected = self.selected.saturating_sub(1);
     }
 
-    /// Toggle node expansion at path
-    /// Returns Some(error_message) if node has error after toggle, None otherwise
+    /// Toggle node expansion at path.
+    /// Returns `Some(error_message)` if the node has an error after toggle, `None` otherwise.
     pub fn toggle_node(&mut self, path: &Path, show_files: bool) -> Result<Option<String>> {
-        // Try incremental update first
+        // Fast path: use path index to toggle without walking the tree.
         if let Some(index) = self.path_to_index.get(path).copied() {
             if index < self.flat_list.len() {
-                let node = &self.flat_list[index];
-                let was_expanded = node.borrow().is_expanded;
-
-                // Toggle the node
                 let error_msg = {
-                    let mut node_borrowed = node.borrow_mut();
+                    let mut node_borrowed = self.flat_list[index].borrow_mut();
                     node_borrowed.toggle_expand(
                         show_files,
                         self.show_hidden,
@@ -124,24 +120,12 @@ impl Navigation {
                         None
                     }
                 };
-
-                // Check actual state after toggle (may not change if error occurred)
-                let is_expanded = node.borrow().is_expanded;
-
-                // Incremental update of flat_list
-                if was_expanded && !is_expanded {
-                    // Node was expanded, now collapsed - remove children from flat_list
-                    self.remove_descendants_from_flat_list(index);
-                } else if !was_expanded && is_expanded {
-                    // Node was collapsed, now successfully expanded - add children to flat_list
-                    self.insert_children_into_flat_list(index);
-                }
-
+                self.rebuild_flat_list();
                 return Ok(error_msg);
             }
         }
 
-        // Fallback to full rebuild if node not found in flat_list
+        // Fallback: walk the tree to find and toggle the node.
         let error_msg = match Self::toggle_node_recursive(
             &self.root,
             path,
@@ -432,68 +416,6 @@ impl Navigation {
         }
 
         Ok(false)
-    }
-
-    /// Remove all descendants of node at given index from flat_list (when collapsing)
-    fn remove_descendants_from_flat_list(&mut self, parent_index: usize) {
-        let parent_depth = self.flat_list[parent_index].borrow().depth;
-
-        // Find the range of descendants to remove
-        // All nodes after parent with depth > parent_depth are descendants
-        let mut remove_count = 0;
-        for i in (parent_index + 1)..self.flat_list.len() {
-            if self.flat_list[i].borrow().depth > parent_depth {
-                remove_count += 1;
-            } else {
-                break; // Found a sibling or ancestor, stop
-            }
-        }
-
-        // Remove descendants
-        if remove_count > 0 {
-            self.flat_list
-                .drain((parent_index + 1)..(parent_index + 1 + remove_count));
-        }
-
-        // Rebuild path_to_index mapping
-        self.rebuild_path_index();
-    }
-
-    /// Insert children of node at given index into flat_list (when expanding)
-    fn insert_children_into_flat_list(&mut self, parent_index: usize) {
-        let node = &self.flat_list[parent_index];
-
-        // Collect all visible descendants of the newly expanded node
-        let mut new_nodes = Vec::new();
-        let (is_expanded, children_count) = {
-            let node_borrowed = node.borrow();
-            (node_borrowed.is_expanded, node_borrowed.children.len())
-        };
-
-        if is_expanded {
-            for i in 0..children_count {
-                let child = Rc::clone(&node.borrow().children[i]);
-                Self::collect_visible_nodes(&child, &mut new_nodes);
-            }
-        }
-
-        // Insert new nodes after parent
-        if !new_nodes.is_empty() {
-            let insert_pos = parent_index + 1;
-            self.flat_list.splice(insert_pos..insert_pos, new_nodes);
-        }
-
-        // Rebuild path_to_index mapping
-        self.rebuild_path_index();
-    }
-
-    /// Rebuild only the path_to_index HashMap (faster than full rebuild)
-    fn rebuild_path_index(&mut self) {
-        self.path_to_index.clear();
-        for (idx, node) in self.flat_list.iter().enumerate() {
-            let path = node.borrow().path.clone();
-            self.path_to_index.insert(path, idx);
-        }
     }
 }
 
