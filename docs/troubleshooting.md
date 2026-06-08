@@ -170,7 +170,9 @@ background search if needed.
 ### Bookmark Path No Longer Exists
 
 bmrk stores paths as-is. If a bookmarked directory was moved or deleted, the bookmark
-becomes stale. Remove it with `bm -d <name>` and add a new one.
+becomes stale. When you jump to a stale bookmark, bmrk shows an error in the header row
+(`✗ Directory not found: <path>`) and stays in the current directory. Remove the stale
+bookmark with `bm -d <name>` and add a new one pointing to the correct location.
 
 ---
 

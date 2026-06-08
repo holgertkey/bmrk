@@ -19,6 +19,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `bookmarks.rs`: `save()` used `fs::write` which truncates the file before writing; an
   interruption between the two steps left an empty file that silently wiped all bookmarks on
   next load. Now writes to a sibling `.json.tmp` file and renames atomically.
+- `navigation.rs`: jumping to a deleted or moved bookmark silently did nothing — `go_to_directory`
+  returned `Ok(None)` for both a non-existent path and a successful navigation, so all callers
+  discarded the result. Now returns `"Directory not found: <path>"` or `"Not a directory: <path>"`
+  stored in `Navigation::nav_error` and displayed in the UI header row (red, `✗` prefix) until the
+  next successful navigation.
+- `event_handler.rs` / `ui.rs`: scroll wheel in the bookmark creation panel used a hardcoded
+  `max_visible = 10`, making entries below the 10th unreachable in compact mode (which shows ~4–5
+  rows). `UI::bookmark_panel_height` is now updated from the actual rendered area height each frame
+  and passed to `bookmarks.scroll_down()`.
 
 ## [0.1.0] - 2026-06-07
 
