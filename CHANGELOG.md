@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- `search.rs`: infinite recursion (stack overflow) when background deep-search follows cyclic
+  symlinks (`A → B → A`). Canonical paths are now tracked in a `HashSet` and cycles are skipped.
+
 ## [0.1.0] - 2026-06-07
 
 Initial release of **bmrk** — forked from [dtree](https://github.com/holgertkey/dtree) v1.3.0

@@ -270,6 +270,7 @@ impl Search {
             let matcher = fuzzy.then(SkimMatcherV2::default);
             Self::deep_search_recursive(
                 &root_path,
+                &mut HashSet::new(),
                 &query,
                 &result_tx,
                 &cancel_rx,
@@ -291,6 +292,7 @@ impl Search {
     /// Recursive deep search in background thread
     fn deep_search_recursive(
         path: &PathBuf,
+        visited: &mut HashSet<PathBuf>,
         query: &str,
         result_tx: &Sender<SearchMessage>,
         cancel_rx: &Receiver<()>,
@@ -354,6 +356,16 @@ impl Search {
 
         // If directory, scan children
         if is_dir {
+            // Cycle detection: skip canonical paths already visited (handles symlink cycles A→B→A)
+            if follow_symlinks {
+                if let Ok(canonical) = path.canonicalize() {
+                    if !visited.insert(canonical) {
+                        return;
+                    }
+                }
+                // canonicalize() failure is non-fatal: proceed without recording this path
+            }
+
             *scanned += 1;
 
             if (*scanned).is_multiple_of(100) {
@@ -369,6 +381,7 @@ impl Search {
                     let child_path = entry.path();
                     Self::deep_search_recursive(
                         &child_path,
+                        visited,
                         query,
                         result_tx,
                         cancel_rx,
@@ -655,6 +668,89 @@ mod tests {
 
         // Clean up
         search.cancel_search();
+        let _ = std::fs::remove_dir_all(&test_dir);
+    }
+
+    /// Verify that cyclic symlinks (A → B → A) do not cause infinite recursion.
+    ///
+    /// Prints whether symlinks were actually created so a skip is visible in `--nocapture`
+    /// output and cannot masquerade as a passing run.
+    #[test]
+    fn test_symlink_cycle_does_not_hang() {
+        use std::time::{Duration, Instant};
+
+        let test_dir = std::env::temp_dir().join("bmrk_test_symlink_cycle");
+        let _ = std::fs::remove_dir_all(&test_dir);
+        std::fs::create_dir_all(&test_dir).unwrap();
+
+        let dir_a = test_dir.join("dir_a");
+        std::fs::create_dir_all(&dir_a).unwrap();
+
+        // dir_b (symlink) → dir_a
+        let dir_b = test_dir.join("dir_b");
+        #[cfg(unix)]
+        let r1 = std::os::unix::fs::symlink(&dir_a, &dir_b);
+        #[cfg(windows)]
+        let r1 = std::os::windows::fs::symlink_dir(&dir_a, &dir_b);
+        #[cfg(not(any(unix, windows)))]
+        let r1: std::io::Result<()> = Err(std::io::Error::other("unsupported platform"));
+
+        if r1.is_err() {
+            eprintln!("test_symlink_cycle_does_not_hang: SKIPPED (symlink creation failed: {:?})", r1);
+            let _ = std::fs::remove_dir_all(&test_dir);
+            return;
+        }
+
+        // dir_a/link_to_b (symlink) → dir_b  →  completes the cycle dir_a ↔ dir_b
+        let link_in_a = dir_a.join("link_to_b");
+        #[cfg(unix)]
+        let r2 = std::os::unix::fs::symlink(&dir_b, &link_in_a);
+        #[cfg(windows)]
+        let r2 = std::os::windows::fs::symlink_dir(&dir_b, &link_in_a);
+        #[cfg(not(any(unix, windows)))]
+        let r2: std::io::Result<()> = Err(std::io::Error::other("unsupported platform"));
+
+        if r2.is_err() {
+            eprintln!("test_symlink_cycle_does_not_hang: SKIPPED (second symlink failed: {:?})", r2);
+            let _ = std::fs::remove_dir_all(&test_dir);
+            return;
+        }
+
+        eprintln!("test_symlink_cycle_does_not_hang: cyclic symlinks created, running search");
+
+        let root = std::rc::Rc::new(std::cell::RefCell::new(
+            crate::tree_node::TreeNode::new(test_dir.clone(), 0).unwrap(),
+        ));
+
+        let mut search = Search::new();
+        search.enter_mode();
+        search.add_char('d'); // matches "dir_a", "dir_b"
+
+        let start = Instant::now();
+        search.perform_search(&root, false, true, true); // follow_symlinks = true
+
+        let timeout = Duration::from_secs(5);
+        while start.elapsed() < timeout {
+            search.poll_results();
+            if !search.is_active() {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(20));
+        }
+
+        let elapsed = start.elapsed();
+        eprintln!("test_symlink_cycle_does_not_hang: completed in {:?}", elapsed);
+
+        assert!(
+            !search.is_active(),
+            "Search did not complete — likely infinite loop in cyclic symlinks"
+        );
+        assert!(
+            elapsed < Duration::from_secs(5),
+            "Search took too long ({:?}): possible infinite loop",
+            elapsed
+        );
+
         let _ = std::fs::remove_dir_all(&test_dir);
     }
 }
