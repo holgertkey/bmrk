@@ -5,6 +5,12 @@ use std::collections::{HashMap, VecDeque};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
+/// Result of a recursive toggle search: distinguishes "not found" from "found".
+enum ToggleResult {
+    NotFound,
+    Found(Option<String>),
+}
+
 /// Navigation logic for tree traversal and manipulation
 pub struct Navigation {
     pub root: TreeNodeRef,
@@ -136,13 +142,16 @@ impl Navigation {
         }
 
         // Fallback to full rebuild if node not found in flat_list
-        let error_msg = Self::toggle_node_recursive(
+        let error_msg = match Self::toggle_node_recursive(
             &self.root,
             path,
             show_files,
             self.show_hidden,
             self.follow_symlinks,
-        )?;
+        )? {
+            ToggleResult::Found(msg) => msg,
+            ToggleResult::NotFound => None,
+        };
         self.rebuild_flat_list();
         Ok(error_msg)
     }
@@ -153,39 +162,37 @@ impl Navigation {
         show_files: bool,
         show_hidden: bool,
         follow_symlinks: bool,
-    ) -> Result<Option<String>> {
+    ) -> Result<ToggleResult> {
         // Check if this is the target node
         {
             let mut node_borrowed = node.borrow_mut();
             if node_borrowed.path == target_path {
                 node_borrowed.toggle_expand(show_files, show_hidden, follow_symlinks)?;
-                // Check if node has error after toggle
                 let error_msg = if node_borrowed.has_error {
                     node_borrowed.error_message.clone()
                 } else {
                     None
                 };
-                return Ok(error_msg);
+                return Ok(ToggleResult::Found(error_msg));
             }
         }
 
-        // Recursively search children without cloning
-        // We need to drop the borrow before recursing
+        // Recursively search children; stop as soon as the target is found.
         let children_count = node.borrow().children.len();
         for i in 0..children_count {
             let child = Rc::clone(&node.borrow().children[i]);
-            if let Some(error_msg) = Self::toggle_node_recursive(
+            if let ToggleResult::Found(msg) = Self::toggle_node_recursive(
                 &child,
                 target_path,
                 show_files,
                 show_hidden,
                 follow_symlinks,
             )? {
-                return Ok(Some(error_msg));
+                return Ok(ToggleResult::Found(msg));
             }
         }
 
-        Ok(None)
+        Ok(ToggleResult::NotFound)
     }
 
     /// Reload tree with new show_files setting
