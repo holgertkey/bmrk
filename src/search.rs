@@ -5,6 +5,7 @@ use crate::tree_node::TreeNodeRef;
 use crossbeam_channel::{bounded, unbounded, Receiver, Sender};
 use std::collections::HashSet;
 use std::path::PathBuf;
+use std::rc::Rc;
 use std::thread::{self, JoinHandle};
 
 /// Maximum number of search results to collect (prevents O(n²) dedup stall on broad queries)
@@ -236,14 +237,15 @@ impl Search {
 
         // Recursively search already loaded children
         if node_borrowed.is_expanded {
-            let children = node_borrowed.children.clone();
+            let children_count = node_borrowed.children.len();
             drop(node_borrowed);
 
-            for child in &children {
+            for i in 0..children_count {
                 if self.results.len() >= MAX_SEARCH_RESULTS {
                     return;
                 }
-                self.search_loaded_nodes(child, query, show_files, show_hidden, fuzzy, matcher);
+                let child = Rc::clone(&node.borrow().children[i]);
+                self.search_loaded_nodes(&child, query, show_files, show_hidden, fuzzy, matcher);
             }
         }
     }
