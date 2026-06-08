@@ -49,6 +49,8 @@ pub struct Disks {
     pub disks: Vec<DiskInfo>,
     pub is_selecting: bool,
     pub selected_index: usize,
+    /// `true` after keyboard navigation (center in viewport); `false` after mouse (minimal scroll).
+    pub center_selection: bool,
 }
 
 impl Default for Disks {
@@ -63,6 +65,7 @@ impl Disks {
             disks: Vec::new(),
             is_selecting: false,
             selected_index: 0,
+            center_selection: false,
         }
     }
 
@@ -70,6 +73,7 @@ impl Disks {
         self.disks = enumerate_disks();
         self.is_selecting = true;
         self.selected_index = 0;
+        self.center_selection = false;
         // Pre-select the disk whose mount point is the longest prefix of current_path
         if let Some(path) = current_path {
             let mut best_len = 0usize;
@@ -97,12 +101,14 @@ impl Disks {
         if self.selected_index > 0 {
             self.selected_index -= 1;
         }
+        self.center_selection = true;
     }
 
     pub fn move_down(&mut self) {
         if !self.disks.is_empty() && self.selected_index + 1 < self.disks.len() {
             self.selected_index += 1;
         }
+        self.center_selection = true;
     }
 
     pub fn get_selected(&self) -> Option<&DiskInfo> {

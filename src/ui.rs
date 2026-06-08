@@ -411,12 +411,23 @@ impl UI {
 
                 let visible = body_area.height as usize;
                 let total = disks.disks.len();
-                let offset = if disks.selected_index < visible / 2 {
-                    0
-                } else if disks.selected_index >= total.saturating_sub(visible / 2) {
-                    total.saturating_sub(visible)
+                let offset = if disks.center_selection {
+                    if disks.selected_index < visible / 2 {
+                        0
+                    } else if disks.selected_index >= total.saturating_sub(visible / 2) {
+                        total.saturating_sub(visible)
+                    } else {
+                        disks.selected_index.saturating_sub(visible / 2)
+                    }
                 } else {
-                    disks.selected_index.saturating_sub(visible / 2)
+                    let current = self.disk_scroll_offset;
+                    if disks.selected_index < current {
+                        disks.selected_index
+                    } else if visible > 0 && disks.selected_index >= current + visible {
+                        disks.selected_index.saturating_sub(visible - 1)
+                    } else {
+                        current
+                    }
                 };
                 *state.offset_mut() = offset;
                 self.disk_scroll_offset = offset;

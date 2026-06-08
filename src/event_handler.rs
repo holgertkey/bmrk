@@ -420,6 +420,7 @@ impl EventHandler {
                         self.last_click_time = None;
                     } else {
                         disks.selected_index = clicked_disk;
+                        disks.center_selection = false;
                         self.last_click_time = Some((now, clicked_disk));
                     }
                 }
@@ -513,6 +514,7 @@ impl EventHandler {
     ) -> Result<()> {
         if disks.is_selecting {
             disks.move_up();
+            disks.center_selection = false;
             return Ok(());
         }
         if bookmarks.is_selecting {
@@ -550,6 +552,7 @@ impl EventHandler {
     ) -> Result<()> {
         if disks.is_selecting {
             disks.move_down();
+            disks.center_selection = false;
             return Ok(());
         }
         if bookmarks.is_selecting {
