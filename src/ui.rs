@@ -669,12 +669,25 @@ impl UI {
 
             let visible = body_area.height as usize;
             let total = nav.flat_list.len();
-            let offset = if nav.selected < visible / 2 {
-                0
-            } else if nav.selected >= total.saturating_sub(visible / 2) {
-                total.saturating_sub(visible)
+            let offset = if nav.center_selection {
+                // keyboard nav: keep selection centered in viewport
+                if nav.selected < visible / 2 {
+                    0
+                } else if nav.selected >= total.saturating_sub(visible / 2) {
+                    total.saturating_sub(visible)
+                } else {
+                    nav.selected.saturating_sub(visible / 2)
+                }
             } else {
-                nav.selected.saturating_sub(visible / 2)
+                // mouse action: minimal scroll — only move if selection left the visible area
+                let current = self.tree_scroll_offset;
+                if nav.selected < current {
+                    nav.selected
+                } else if visible > 0 && nav.selected >= current + visible {
+                    nav.selected.saturating_sub(visible - 1)
+                } else {
+                    current
+                }
             };
             *state.offset_mut() = offset;
             self.tree_scroll_offset = offset;

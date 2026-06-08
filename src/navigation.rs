@@ -22,6 +22,9 @@ pub struct Navigation {
     pub history: VecDeque<PathBuf>,
     /// Last navigation error message, shown in the UI header until the next successful navigation.
     pub nav_error: Option<String>,
+    /// When `true` the renderer centers the selected item; `false` uses minimal (ensure-visible) scroll.
+    /// Set to `true` by keyboard navigation, `false` by mouse actions.
+    pub center_selection: bool,
     // Performance optimization: HashMap for O(1) path lookup
     path_to_index: HashMap<PathBuf, usize>,
 }
@@ -46,6 +49,7 @@ impl Navigation {
             follow_symlinks,
             history: VecDeque::new(),
             nav_error: None,
+            center_selection: true,
             path_to_index: HashMap::new(),
         };
 

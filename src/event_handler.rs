@@ -141,10 +141,12 @@ impl EventHandler {
             if key.modifiers.contains(KeyModifiers::CONTROL) {
                 match key.code {
                     KeyCode::Char('j') | KeyCode::Char('J') | KeyCode::Down => {
+                        nav.center_selection = true;
                         nav.move_down();
                         return Ok(Some(PathBuf::new()));
                     }
                     KeyCode::Char('k') | KeyCode::Char('K') | KeyCode::Up => {
+                        nav.center_selection = true;
                         nav.move_up();
                         return Ok(Some(PathBuf::new()));
                     }
@@ -246,6 +248,7 @@ impl EventHandler {
                 if search.focus_on_results {
                     search.move_down();
                 } else {
+                    nav.center_selection = true;
                     nav.move_down();
                 }
             }
@@ -253,6 +256,7 @@ impl EventHandler {
                 if search.focus_on_results {
                     search.move_up();
                 } else {
+                    nav.center_selection = true;
                     nav.move_up();
                 }
             }
@@ -451,6 +455,7 @@ impl EventHandler {
                     self.last_click_time = None;
                 } else {
                     nav.selected = clicked_row;
+                    nav.center_selection = false;
                     self.last_click_time = Some((now, clicked_row));
                 }
             }
@@ -490,6 +495,7 @@ impl EventHandler {
         for _ in 0..config.behavior.mouse_scroll_lines {
             nav.move_up();
         }
+        nav.center_selection = false;
         Ok(())
     }
 
@@ -527,6 +533,7 @@ impl EventHandler {
                 nav.move_down();
             }
         }
+        nav.center_selection = false;
         Ok(())
     }
 }
