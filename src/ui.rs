@@ -77,6 +77,8 @@ pub struct UI {
     pub bottom_panel_height: u16,
     /// Visible row count of the bookmark list in creation mode, set each render.
     pub bookmark_panel_height: usize,
+    /// Scroll offset of the bookmark selection list, updated each render.
+    pub bookmark_scroll_offset: usize,
 }
 
 impl Default for UI {
@@ -99,6 +101,7 @@ impl UI {
             disk_scroll_offset: 0,
             bottom_panel_height: 0,
             bookmark_panel_height: 0,
+            bookmark_scroll_offset: 0,
         }
     }
 
@@ -478,6 +481,7 @@ impl UI {
                     bookmarks.selected_index.saturating_sub(visible / 2)
                 };
                 *state.offset_mut() = offset;
+                self.bookmark_scroll_offset = offset;
 
                 let cursor_color_str = Config::get_color(&config.appearance.colors.cursor_color);
                 let highlight_style = if cursor_color_str.to_lowercase() == "dim" {
