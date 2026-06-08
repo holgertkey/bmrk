@@ -12,6 +12,13 @@ DESCRIPTION
     • Terminal returns to its exact pre-launch state on exit (no artifacts)
     • Ideal for quick directory navigation without interrupting your workflow
 
+TREE INDICATORS
+  ▼  Expanded directory
+  ▶  Collapsed directory (has subdirectories)
+     (blank)  Empty directory or file
+  ⊘  Inaccessible directory — no read permission (shown in error color)
+     ascii mode uses: v / > / !
+
 KEYBOARD NAVIGATION
   ↑ / k          Navigate up in the tree
   ↓ / j          Navigate down in the tree

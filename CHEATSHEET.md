@@ -52,6 +52,8 @@ bm -v / --version           # Show version
 | `q`              | Exit and print selected path        |
 | `Esc`            | Exit without output                 |
 
+**Icons**: `▼` expanded · `▶` collapsed · `⊘` no read access (error color) · blank = empty/file
+
 ---
 
 ## Search

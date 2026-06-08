@@ -91,6 +91,11 @@ Processes all keyboard and mouse events. Routes based on current app mode:
 5. Escape / q check
 6. Tree mode → navigation
 
+Mouse click and scroll events are dispatched to the active panel (disk, bookmark, or tree).
+All panels use **minimal scrolling** — the view shifts only when the selection leaves the
+visible area. Keyboard navigation sets `center_selection = true`; mouse actions set it to
+`false`. This flag is present on `Navigation`, `Bookmarks`, and `Disks`.
+
 ### `ui.rs`
 
 All rendering using `ratatui`. Calculates areas on each render and stores dimensions for
@@ -106,24 +111,33 @@ Manages the directory tree state:
 - `history: VecDeque<PathBuf>` — undo stack (up to 50 entries)
 - `center_selection: bool` — scroll hint for the renderer: `true` centers the selection
   (keyboard navigation), `false` uses minimal scrolling (mouse actions)
+- `nav_error: Option<String>` — last navigation error, displayed in the header until cleared
 
-Key methods: `go_back()` (undo), `go_to_parent()`, `change_root()`, `rebuild_flat_list()`.
+Key methods: `go_back()` (undo), `go_to_parent()`, `go_to_directory()`, `rebuild_flat_list()`.
 
 ### `tree_node.rs`
 
 ```rust
 pub struct TreeNode {
     pub path: PathBuf,
+    pub name: String,
     pub is_dir: bool,
+    pub is_expanded: bool,
+    pub depth: usize,
     pub children: Vec<TreeNodeRef>,
-    pub expanded: bool,
-    pub has_error: bool,
+    pub has_children: Option<bool>, // None = unknown, Some(false) = leaf (no "▶")
+    pub has_error: bool,            // set by probe_has_children OR load_children on read failure
+    pub error_message: Option<String>,
 }
 
 pub type TreeNodeRef = Rc<RefCell<TreeNode>>;
 ```
 
-Directories are loaded lazily when first expanded.
+Directories are loaded lazily when first expanded. `probe_has_children` is called on each
+child after the parent loads — it peeks inside the directory to determine whether a `▶`
+expand arrow should be shown, and also sets `has_error` if `read_dir` fails. This means
+inaccessible directories are marked with `⊘` (error color) as soon as the parent expands,
+without requiring the user to attempt entry.
 
 ### `search.rs`
 
@@ -141,6 +155,10 @@ Bookmark CRUD with JSON persistence. Manages two interactive modes:
 - `is_selecting` — bookmark selection panel with navigation and filter sub-modes
 - `is_creating` — name input with existing bookmarks shown for reference
 
+`center_selection: bool` mirrors the same flag on `Navigation` — keyboard moves center the
+view, mouse clicks and scroll use minimal scrolling. `filter_mode: bool` switches between
+navigation (j/k) and text filter (type to narrow) within the selection panel.
+
 ### `config.rs`
 
 Loads `config.toml`, auto-creates with defaults if missing. Parses:
@@ -151,7 +169,8 @@ Loads `config.toml`, auto-creates with defaults if missing. Parses:
 ### `disks.rs`
 
 Uses the `sysinfo` crate to enumerate all disk volumes with mount point, filesystem type,
-free space, and total capacity.
+free space, and total capacity. `center_selection: bool` controls scroll behavior for the
+disk list panel — same semantics as `Navigation::center_selection`.
 
 ### `platform.rs`
 
