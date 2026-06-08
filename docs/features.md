@@ -77,12 +77,14 @@ Browse and switch between all available drives and mount points.
 
 ## Mouse Support
 
-Basic mouse interaction.
+Mouse works in all interactive panels — tree, bookmark selection, and disk selection.
 
 **Features**:
-- Click to select items — the view does not scroll, so double-clicking lands on the same position
-- Double-click to expand/collapse directories
-- Scroll wheel to navigate tree — view scrolls only when selection reaches the edge
+- Click to select the item under the cursor
+- Double-click to expand/collapse directories (tree), navigate to bookmark, or navigate to disk root
+- Scroll wheel to navigate the active list
+- **Minimal scroll**: the view only shifts when the selection leaves the visible area, so a
+  single click followed by a double-click always lands on the same row
 
 ## Configuration System
 

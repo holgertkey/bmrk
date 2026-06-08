@@ -98,9 +98,23 @@ DISK SELECTION (press 'd')
     Esc          Close disk panel without navigating
 
 MOUSE SUPPORT
-  Click          Select item in tree
-  Double-click   Expand/collapse directory
-  Scroll wheel   Navigate tree
+  Tree mode:
+    Click          Select item
+    Double-click   Expand/collapse directory
+    Scroll wheel   Navigate up/down
+
+  Bookmark selection (''):
+    Click          Select bookmark
+    Double-click   Navigate to selected bookmark
+    Scroll wheel   Navigate list
+
+  Disk selection (d):
+    Click          Select disk
+    Double-click   Navigate to selected disk root
+    Scroll wheel   Navigate list
+
+  In all modes: the view shifts only when the selection reaches the edge —
+  double-clicking always lands on the same row.
 
 COMMAND LINE OPTIONS
   bm [PATH]              Open TUI from PATH (default: current directory)

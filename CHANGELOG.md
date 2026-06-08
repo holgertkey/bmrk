@@ -25,6 +25,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   iterator (`values().collect()`), removing the per-call `sort_by_key` allocation.
 
 ### Fixed
+- `event_handler.rs` / `ui.rs` / `bookmarks.rs`: mouse had no effect in the bookmark selection
+  panel. Single click now selects the item under the cursor, double-click navigates to the
+  bookmark, and scroll wheel moves the selection — all without jumping to the center of the
+  viewport (consistent with tree mouse behaviour). `Bookmarks::center_selection` flag added
+  (mirrors `Navigation::center_selection`); scroll handler early-return for
+  `bookmarks.is_selecting` moved before the `bottom_panel_height > 0` guard, which was always
+  `0` in compact mode and silently routed wheel events to the tree instead.
 - `search.rs`: infinite recursion (stack overflow) when background deep-search follows cyclic
   symlinks (`A → B → A`). Canonical paths are now tracked in a `HashSet` and cycles are skipped.
 - `terminal.rs`: raw mode leaked when `setup_terminal_compact` failed after `enable_raw_mode`

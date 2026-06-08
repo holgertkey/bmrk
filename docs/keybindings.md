@@ -136,11 +136,35 @@ After pressing `d` in tree mode:
 
 ## Mouse Bindings
 
+Mouse behaviour adapts to the active panel.
+
+### Tree Mode
+
 | Action       | Effect                         |
 |--------------|--------------------------------|
 | Click        | Select item under cursor       |
 | Double-click | Expand/collapse directory      |
 | Scroll wheel | Navigate tree up/down          |
+
+### Bookmark Selection (`'`)
+
+| Action       | Effect                              |
+|--------------|-------------------------------------|
+| Click        | Select bookmark under cursor        |
+| Double-click | Navigate to the selected bookmark   |
+| Scroll wheel | Navigate bookmark list              |
+
+### Disk Selection (`d`)
+
+| Action       | Effect                              |
+|--------------|-------------------------------------|
+| Click        | Select disk under cursor            |
+| Double-click | Navigate to selected disk root      |
+| Scroll wheel | Navigate disk list                  |
+
+In all modes the view uses **minimal scrolling** — it only shifts when the selection leaves
+the visible area. This means a single click followed by a double-click always lands on the
+same row.
 
 ## Context-Specific Behavior
 

@@ -112,11 +112,15 @@ bm work                     # Jump to bookmark
 
 ## Mouse
 
-| Action           | Effect                  |
-|------------------|-------------------------|
-| **Click**        | Select item             |
-| **Double-click** | Expand/collapse         |
-| **Scroll**       | Navigate tree           |
+Works in tree, bookmark selection, and disk selection panels.
+
+| Action           | Tree                    | Bookmark / Disk panel         |
+|------------------|-------------------------|-------------------------------|
+| **Click**        | Select item             | Select item                   |
+| **Double-click** | Expand/collapse         | Navigate to selected location |
+| **Scroll**       | Navigate tree           | Navigate list                 |
+
+View uses minimal scrolling — shifts only when selection leaves the visible area.
 
 ---
 

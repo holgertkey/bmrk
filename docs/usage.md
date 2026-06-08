@@ -213,17 +213,32 @@ The panel shows each disk with its mount point, filesystem type, free space, and
 
 ## Mouse Support
 
-### Clicking
+Mouse works in the tree, the bookmark selection panel, and the disk selection panel.
+The view uses minimal scrolling in all modes — it only shifts when the selection leaves
+the visible area, so a single click followed by a double-click always lands on the same row.
+
+### Tree
 
 ```
-Click         Select item (view stays in place — double-click lands at the same position)
+Click         Select item
 Double-click  Expand/collapse directory
+Scroll wheel  Navigate up/down
 ```
 
-### Scrolling
+### Bookmark selection (`'`)
 
 ```
-Scroll wheel  Navigate tree (view shifts only when selection reaches the edge)
+Click         Select bookmark
+Double-click  Navigate to selected bookmark
+Scroll wheel  Navigate list
+```
+
+### Disk selection (`d`)
+
+```
+Click         Select disk
+Double-click  Navigate to selected disk root
+Scroll wheel  Navigate list
 ```
 
 ## Tips for Efficient Usage
