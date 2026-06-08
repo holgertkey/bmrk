@@ -246,6 +246,7 @@ impl EventHandler {
             }
             KeyCode::Char('j') | KeyCode::Down => {
                 if search.focus_on_results {
+                    search.center_selection = true;
                     search.move_down();
                 } else {
                     nav.center_selection = true;
@@ -254,6 +255,7 @@ impl EventHandler {
             }
             KeyCode::Char('k') | KeyCode::Up => {
                 if search.focus_on_results {
+                    search.center_selection = true;
                     search.move_up();
                 } else {
                     nav.center_selection = true;
@@ -375,7 +377,7 @@ impl EventHandler {
     ) -> Result<()> {
         match mouse.kind {
             MouseEventKind::Down(MouseButton::Left) => {
-                self.handle_mouse_click(mouse, nav, bookmarks, disks, ui, config)?;
+                self.handle_mouse_click(mouse, nav, search, bookmarks, disks, ui, config)?;
             }
             MouseEventKind::ScrollUp => {
                 self.handle_scroll_up(mouse, nav, search, bookmarks, disks, ui, config)?;
@@ -392,6 +394,7 @@ impl EventHandler {
         &mut self,
         mouse: MouseEvent,
         nav: &mut Navigation,
+        search: &mut Search,
         bookmarks: &mut Bookmarks,
         disks: &mut Disks,
         ui: &UI,
@@ -465,6 +468,39 @@ impl EventHandler {
             return Ok(());
         }
 
+        if search.show_results && search.focus_on_results {
+            if mouse.row >= ui.tree_area_top && mouse.row < ui.tree_area_top + ui.tree_area_height {
+                let clicked_row_visible = mouse.row.saturating_sub(ui.tree_area_top) as usize;
+                let clicked_idx = clicked_row_visible + ui.search_scroll_offset;
+
+                if clicked_idx < search.results.len() {
+                    let now = Instant::now();
+                    let is_double_click = if let Some((last_time, last_idx)) = self.last_click_time
+                    {
+                        clicked_idx == last_idx
+                            && now.duration_since(last_time)
+                                < Duration::from_millis(config.behavior.double_click_timeout_ms)
+                    } else {
+                        false
+                    };
+
+                    if is_double_click {
+                        if let Some(path) = search.results.get(clicked_idx).map(|r| r.path.clone())
+                        {
+                            let _ = nav.expand_path_to_node(&path, false);
+                            search.focus_on_results = false;
+                        }
+                        self.last_click_time = None;
+                    } else {
+                        search.selected = clicked_idx;
+                        search.center_selection = false;
+                        self.last_click_time = Some((now, clicked_idx));
+                    }
+                }
+            }
+            return Ok(());
+        }
+
         if mouse.column >= ui.tree_area_start
             && mouse.column < ui.tree_area_end
             && mouse.row >= ui.tree_area_top
@@ -522,16 +558,14 @@ impl EventHandler {
             bookmarks.center_selection = false;
             return Ok(());
         }
-        // Bottom panel scrolling (search/bookmark-create in non-compact layout)
-        if ui.bottom_panel_height > 0 {
-            if search.show_results {
-                search.move_up();
-                return Ok(());
-            }
-            if bookmarks.is_creating {
-                bookmarks.scroll_up();
-                return Ok(());
-            }
+        if search.show_results && search.focus_on_results {
+            search.move_up();
+            search.center_selection = false;
+            return Ok(());
+        }
+        if ui.bottom_panel_height > 0 && bookmarks.is_creating {
+            bookmarks.scroll_up();
+            return Ok(());
         }
         for _ in 0..config.behavior.mouse_scroll_lines {
             nav.move_up();
@@ -560,16 +594,15 @@ impl EventHandler {
             bookmarks.center_selection = false;
             return Ok(());
         }
-        if ui.bottom_panel_height > 0 {
-            if search.show_results {
-                search.move_down();
-                return Ok(());
-            }
-            if bookmarks.is_creating {
-                let max_visible = ui.bookmark_panel_height.max(1);
-                bookmarks.scroll_down(max_visible);
-                return Ok(());
-            }
+        if search.show_results && search.focus_on_results {
+            search.move_down();
+            search.center_selection = false;
+            return Ok(());
+        }
+        if ui.bottom_panel_height > 0 && bookmarks.is_creating {
+            let max_visible = ui.bookmark_panel_height.max(1);
+            bookmarks.scroll_down(max_visible);
+            return Ok(());
         }
         for _ in 0..config.behavior.mouse_scroll_lines {
             if nav.selected < nav.flat_list.len().saturating_sub(1) {

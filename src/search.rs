@@ -42,6 +42,8 @@ pub struct Search {
     pub selected: usize,
     pub show_results: bool,
     pub focus_on_results: bool,
+    /// Whether to center the selected item on the next render (true = keyboard nav, false = mouse).
+    pub center_selection: bool,
 
     // Async search state
     pub is_searching: bool,
@@ -69,6 +71,7 @@ impl Search {
             selected: 0,
             show_results: false,
             focus_on_results: false,
+            center_selection: true,
             is_searching: false,
             scanned_count: 0,
             search_thread: None,
@@ -137,6 +140,7 @@ impl Search {
         self.seen_paths.clear();
         self.selected = 0;
         self.scanned_count = 0;
+        self.center_selection = true;
 
         let search_query = self.get_search_query();
 
@@ -521,6 +525,7 @@ impl Search {
         self.results.clear();
         self.selected = 0;
         self.focus_on_results = false;
+        self.center_selection = true;
         self.scanned_count = 0;
     }
 

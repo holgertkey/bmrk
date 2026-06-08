@@ -79,6 +79,8 @@ pub struct UI {
     pub bookmark_panel_height: usize,
     /// Scroll offset of the bookmark selection list, updated each render.
     pub bookmark_scroll_offset: usize,
+    /// Scroll offset of the search results list, updated each render.
+    pub search_scroll_offset: usize,
 }
 
 impl Default for UI {
@@ -102,6 +104,7 @@ impl UI {
             bottom_panel_height: 0,
             bookmark_panel_height: 0,
             bookmark_scroll_offset: 0,
+            search_scroll_offset: 0,
         }
     }
 
@@ -623,14 +626,26 @@ impl UI {
 
                 let visible = body_area.height as usize;
                 let total = search.results.len();
-                let offset = if search.selected < visible / 2 {
-                    0
-                } else if search.selected >= total.saturating_sub(visible / 2) {
-                    total.saturating_sub(visible)
+                let offset = if search.center_selection {
+                    if search.selected < visible / 2 {
+                        0
+                    } else if search.selected >= total.saturating_sub(visible / 2) {
+                        total.saturating_sub(visible)
+                    } else {
+                        search.selected.saturating_sub(visible / 2)
+                    }
                 } else {
-                    search.selected.saturating_sub(visible / 2)
+                    let current = self.search_scroll_offset;
+                    if search.selected < current {
+                        search.selected
+                    } else if visible > 0 && search.selected >= current + visible {
+                        search.selected.saturating_sub(visible - 1)
+                    } else {
+                        current
+                    }
                 };
                 *state.offset_mut() = offset;
+                self.search_scroll_offset = offset;
 
                 let cursor_color_str = Config::get_color(&config.appearance.colors.cursor_color);
                 let highlight_style = if cursor_color_str.to_lowercase() == "dim" {
