@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- `navigation.rs`: `Navigation::history` is now a `VecDeque<PathBuf>` instead of `Vec<PathBuf>`.
+  Oldest-entry eviction (`push_history` cap at 50) is now O(1) `pop_front` instead of O(n) `Vec::remove(0)`.
+- `navigation.rs`: `toggle_node` no longer maintains the flat list incrementally
+  (`remove_descendants_from_flat_list` / `insert_children_into_flat_list` / `rebuild_path_index`
+  removed — ~60 lines). Both paths now call `rebuild_flat_list()` directly; the incremental
+  approach provided no actual saving because `rebuild_path_index` was always O(n) anyway.
+- `navigation.rs`: `toggle_node_recursive` now returns a `ToggleResult` enum (`Found` / `NotFound`)
+  instead of `Option<String>`, allowing the recursive child loop to stop immediately once the target
+  node is found instead of continuing to traverse remaining siblings.
+- `search.rs`: `search_loaded_nodes` no longer clones `node.children` before recursing.
+  Children are now iterated by index — the borrow is dropped, then re-borrowed just long enough
+  to `Rc::clone` each child reference — eliminating a heap allocation per expanded node.
+- `bookmarks.rs`: internal storage changed from `HashMap<String, Bookmark>` to
+  `BTreeMap<String, Bookmark>`. `list()` now returns values in key order directly from the
+  iterator (`values().collect()`), removing the per-call `sort_by_key` allocation.
+
 ### Fixed
 - `search.rs`: infinite recursion (stack overflow) when background deep-search follows cyclic
   symlinks (`A → B → A`). Canonical paths are now tracked in a `HashSet` and cycles are skipped.
