@@ -58,6 +58,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `max_visible = 10`, making entries below the 10th unreachable in compact mode (which shows ~4–5
   rows). `UI::bookmark_panel_height` is now updated from the actual rendered area height each frame
   and passed to `bookmarks.scroll_down()`.
+- `config.rs` / `docs/configuration.md`: generated `config.toml` comment and documentation table
+  both listed `error_color` default as `"red"` after it was changed to `"gray"` in the theme
+  presets. Corrected to `"gray"` in both places.
 - `ui.rs`: navigation error banner (`✗ Directory not found: …`) used a hardcoded `Color::Red`
   instead of the configured `error_color`. The banner now respects the theme like every other
   error indicator (`⊘` icon, deletion markers).

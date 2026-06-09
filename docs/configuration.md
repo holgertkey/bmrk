@@ -101,7 +101,7 @@ Available color fields:
 | `selected_color` | `"cyan"` | Search bar and bookmark input text |
 | `directory_color` | `"gray"` | Directory names in the tree; also the header icon (▼) |
 | `file_color` | `"white"` | File names and list items |
-| `error_color` | `"red"` | Inaccessible directories (`⊘`), navigation errors, deletion markers |
+| `error_color` | `"gray"` | Inaccessible directories (`⊘`), navigation errors, deletion markers |
 | `highlight_color` | `"yellow"` | Matched characters in search results |
 | `cursor_color` | `"yellow"` | Selected item in search/bookmark/disk lists |
 | `tree_cursor_color` | `"dim"` | Selected item color in the tree |
