@@ -51,6 +51,7 @@ impl EventHandler {
         if disks.is_selecting {
             match key.code {
                 _ if config.keybindings.is_exit(key.code) => {
+                    self.last_click_time = None;
                     disks.exit_selection_mode();
                     return Ok(Some(PathBuf::new()));
                 }
@@ -86,6 +87,7 @@ impl EventHandler {
         if bookmarks.is_selecting {
             match key.code {
                 _ if config.keybindings.is_exit(key.code) => {
+                    self.last_click_time = None;
                     bookmarks.exit_selection_mode();
                     return Ok(Some(PathBuf::new()));
                 }
@@ -237,6 +239,7 @@ impl EventHandler {
 
         match key.code {
             _ if config.keybindings.is_search(key.code) => {
+                self.last_click_time = None;
                 search.enter_mode();
                 return Ok(Some(PathBuf::new()));
             }
@@ -324,9 +327,11 @@ impl EventHandler {
                 bookmarks.enter_creation_mode();
             }
             _ if config.keybindings.is_select_bookmark(key.code) => {
+                self.last_click_time = None;
                 bookmarks.enter_selection_mode();
             }
             _ if config.keybindings.is_select_disk(key.code) => {
+                self.last_click_time = None;
                 let current_path = nav.root.borrow().path.clone();
                 disks.enter_selection_mode(Some(&current_path));
             }
@@ -345,6 +350,7 @@ impl EventHandler {
     ) -> Result<Option<PathBuf>> {
         match key.code {
             _ if config.keybindings.is_exit(key.code) => {
+                self.last_click_time = None;
                 search.exit_mode();
                 Ok(Some(PathBuf::new()))
             }

@@ -58,6 +58,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `max_visible = 10`, making entries below the 10th unreachable in compact mode (which shows ~4–5
   rows). `UI::bookmark_panel_height` is now updated from the actual rendered area height each frame
   and passed to `bookmarks.scroll_down()`.
+- `event_handler.rs`: `last_click_time` was shared across all panels (tree, bookmarks, search,
+  disks). A click on item N in the tree followed by opening a panel and clicking item N within
+  the double-click timeout fired as a double-click in the new panel (immediate navigation instead
+  of selection). `last_click_time` is now reset whenever a panel is opened (`'`, `/`, `d`) or
+  closed with Esc.
 - `navigation.rs`: `go_back` popped the history entry before checking whether the target
   directory was accessible. If the target had been deleted or its disk disconnected, the entry
   was silently dropped and `nav_error` was never set — pressing `u` appeared to do nothing with
