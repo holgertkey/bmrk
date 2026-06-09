@@ -58,6 +58,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `max_visible = 10`, making entries below the 10th unreachable in compact mode (which shows ~4–5
   rows). `UI::bookmark_panel_height` is now updated from the actual rendered area height each frame
   and passed to `bookmarks.scroll_down()`.
+- `search.rs`: symlink-cycle guard silently skipped recording a path when `canonicalize()`
+  failed (ELOOP, permission denied, etc.), leaving a hole where the same physical directory
+  could be visited more than once and a cycle through such paths would not terminate until
+  `MAX_SEARCH_RESULTS` was hit. The fallback now uses the raw path as the visited-set key when
+  `canonicalize()` fails, guaranteeing each path is visited at most once.
 - `event_handler.rs`: `last_click_time` was shared across all panels (tree, bookmarks, search,
   disks). A click on item N in the tree followed by opening a panel and clicking item N within
   the double-click timeout fired as a double-click in the new panel (immediate navigation instead

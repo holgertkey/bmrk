@@ -364,12 +364,10 @@ impl Search {
         if is_dir {
             // Cycle detection: skip canonical paths already visited (handles symlink cycles A→B→A)
             if follow_symlinks {
-                if let Ok(canonical) = path.canonicalize() {
-                    if !visited.insert(canonical) {
-                        return;
-                    }
+                let key = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+                if !visited.insert(key) {
+                    return;
                 }
-                // canonicalize() failure is non-fatal: proceed without recording this path
             }
 
             *scanned += 1;
