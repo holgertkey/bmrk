@@ -62,6 +62,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   to re-aim the mouse for a double-click. Mouse actions (click, scroll wheel) now use minimal
   scrolling — the view only moves if the selection leaves the visible area. Keyboard navigation
   still centers the selection. Controlled by `Navigation::center_selection`.
+- `event_handler.rs` / `ui.rs` / `search.rs`: mouse had no effect in the search results panel.
+  Single click now selects the item under the cursor, double-click navigates to the result (same
+  as `Enter`), and scroll wheel moves the selection without re-centering. `Search::center_selection`
+  flag added (mirrors the pattern from `Navigation` and `Bookmarks`). Also fixed a latent bug:
+  scroll events in the search results panel were silently routed to the tree in compact mode
+  because the `bottom_panel_height > 0` guard was always `0`; the guard has been removed for
+  the search case, with `focus_on_results` as the check instead.
 
 ## [0.1.0] - 2026-06-07
 
