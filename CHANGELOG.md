@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- `navigation.rs`: `go_to_directory` post-construction guard checked only `has_error`, missing
+  the `!is_dir` case. In a TOCTOU window (directory deleted or replaced by a file between the
+  pre-check and `TreeNode::new`), the node would have `is_dir = false, has_error = false`,
+  causing navigation to silently "succeed" — root replaced with a non-directory node, history
+  poisoned, `nav_error` cleared. Guard widened to `if !new_root.is_dir || new_root.has_error`,
+  consistent with `go_back` which already had the correct check.
+
 ### Changed
 - `navigation.rs`: `Navigation::history` is now a `VecDeque<PathBuf>` instead of `Vec<PathBuf>`.
   Oldest-entry eviction (`push_history` cap at 50) is now O(1) `pop_front` instead of O(n) `Vec::remove(0)`.

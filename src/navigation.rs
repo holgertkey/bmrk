@@ -339,15 +339,21 @@ impl Navigation {
         new_root.load_children(show_files, self.show_hidden, self.follow_symlinks)?;
         new_root.is_expanded = true;
 
-        // Check if the new root has an error
-        if new_root.has_error {
-            // Restore previous state - don't change directory
+        // Check if the new root is unusable (TOCTOU: path may have changed since pre-checks).
+        if !new_root.is_dir || new_root.has_error {
             self.root = old_root;
             self.selected = old_selected;
-            let msg = new_root.error_message.clone();
-            if let Some(ref m) = msg {
+            let msg = if !new_root.is_dir {
+                let m = format!("Not a directory: {}", new_root.path.display());
                 self.nav_error = Some(m.clone());
-            }
+                Some(m)
+            } else {
+                let m = new_root.error_message.clone();
+                if let Some(ref s) = m {
+                    self.nav_error = Some(s.clone());
+                }
+                m
+            };
             return Ok(msg);
         }
 
@@ -592,6 +598,26 @@ mod tests {
             nav.nav_error.is_none(),
             "expand_path_to_node must clear nav_error on success"
         );
+    }
+
+    #[test]
+    fn go_to_directory_with_file_path_does_not_navigate() {
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path().to_path_buf();
+        let file = root.join("regular.txt");
+        std::fs::write(&file, b"hello").unwrap();
+
+        let mut nav = make_nav(root.clone());
+        let result = nav.go_to_directory(file.clone(), false).unwrap();
+
+        assert!(result.is_some(), "must return error for a file path");
+        assert!(
+            result.unwrap().contains(file.to_str().unwrap()),
+            "error message must mention the path"
+        );
+        assert_eq!(nav.root.borrow().path, root, "root must not change");
+        assert_eq!(nav.history.len(), 0, "history must not grow");
+        assert!(nav.nav_error.is_some(), "nav_error must be set");
     }
 
     #[test]
