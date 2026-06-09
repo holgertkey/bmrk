@@ -58,6 +58,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `max_visible = 10`, making entries below the 10th unreachable in compact mode (which shows ~4–5
   rows). `UI::bookmark_panel_height` is now updated from the actual rendered area height each frame
   and passed to `bookmarks.scroll_down()`.
+- `ui.rs`: navigation error banner (`✗ Directory not found: …`) used a hardcoded `Color::Red`
+  instead of the configured `error_color`. The banner now respects the theme like every other
+  error indicator (`⊘` icon, deletion markers).
 - `navigation.rs` / `ui.rs`: clicking an item caused the view to re-center on it, forcing the user
   to re-aim the mouse for a double-click. Mouse actions (click, scroll wheel) now use minimal
   scrolling — the view only moves if the selection leaves the visible area. Keyboard navigation

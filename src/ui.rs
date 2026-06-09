@@ -312,12 +312,14 @@ impl UI {
             } else {
                 " ! "
             };
+            let error_color =
+                Config::parse_color(Config::get_color(&config.appearance.colors.error_color));
             frame.render_widget(
                 Paragraph::new(Line::from(vec![
-                    Span::styled(error_icon, Style::default().fg(Color::Red)),
+                    Span::styled(error_icon, Style::default().fg(error_color)),
                     Span::styled(
                         msg_display,
-                        Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+                        Style::default().fg(error_color).add_modifier(Modifier::BOLD),
                     ),
                     Span::styled(hints, Style::default().fg(header_hints_color)),
                 ])),
