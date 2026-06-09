@@ -157,9 +157,7 @@ fn query_cursor_position() -> (u16, u16) {
     use std::io::{Read, Write};
     use std::time::Duration;
 
-    if std::io::stderr().write_all(b"\x1B[6n").is_err()
-        || std::io::stderr().flush().is_err()
-    {
+    if std::io::stderr().write_all(b"\x1B[6n").is_err() || std::io::stderr().flush().is_err() {
         return (0, 0);
     }
 
@@ -186,7 +184,9 @@ fn query_cursor_position() -> (u16, u16) {
         }
     });
 
-    let data = rx.recv_timeout(Duration::from_millis(500)).unwrap_or_default();
+    let data = rx
+        .recv_timeout(Duration::from_millis(500))
+        .unwrap_or_default();
     parse_cpr_response(&data).unwrap_or((0, 0))
 }
 
