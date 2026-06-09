@@ -105,7 +105,7 @@ impl ThemeConfig {
             selected_color: Some("cyan".to_string()),
             directory_color: Some("gray".to_string()),
             file_color: Some("white".to_string()),
-            error_color: Some("red".to_string()),
+            error_color: Some("gray".to_string()),
             highlight_color: Some("yellow".to_string()),
             cursor_color: Some("yellow".to_string()),
             tree_cursor_color: Some("dim".to_string()),
