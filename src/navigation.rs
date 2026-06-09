@@ -262,6 +262,7 @@ impl Navigation {
             self.push_history(current_path.clone());
             self.root = Rc::new(RefCell::new(new_root));
             self.rebuild_flat_list();
+            self.nav_error = None;
 
             // Find and select previous directory using HashMap (O(1) instead of O(n))
             if let Some(&idx) = self.path_to_index.get(&current_path) {
@@ -287,6 +288,7 @@ impl Navigation {
             return Ok(false);
         }
 
+        self.nav_error = None;
         self.root = Rc::new(RefCell::new(new_root));
         self.rebuild_flat_list();
         self.selected = 0;
@@ -365,6 +367,8 @@ impl Navigation {
             self.follow_symlinks,
         )?;
         self.rebuild_flat_list();
+
+        self.nav_error = None;
 
         // Find and select element in tree using HashMap (O(1) instead of O(n))
         if let Some(&idx) = self.path_to_index.get(target_path) {
@@ -529,5 +533,49 @@ mod tests {
         nav.go_to_parent(false).unwrap();
         assert_eq!(nav.history.len(), 1);
         assert_eq!(nav.history[0], child);
+    }
+
+    #[test]
+    fn go_back_clears_nav_error() {
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path().to_path_buf();
+        let child = root.join("child");
+        std::fs::create_dir(&child).unwrap();
+
+        let mut nav = make_nav(root.clone());
+        nav.go_to_directory(child, false).unwrap();
+        nav.nav_error = Some("stale error".into());
+
+        let went_back = nav.go_back(false).unwrap();
+        assert!(went_back);
+        assert!(nav.nav_error.is_none(), "go_back must clear nav_error on success");
+    }
+
+    #[test]
+    fn go_to_parent_clears_nav_error() {
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path().to_path_buf();
+        let child = root.join("child");
+        std::fs::create_dir(&child).unwrap();
+
+        let mut nav = make_nav(child.clone());
+        nav.nav_error = Some("stale error".into());
+
+        nav.go_to_parent(false).unwrap();
+        assert!(nav.nav_error.is_none(), "go_to_parent must clear nav_error on success");
+    }
+
+    #[test]
+    fn expand_path_to_node_clears_nav_error() {
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path().to_path_buf();
+        let child = root.join("child");
+        std::fs::create_dir(&child).unwrap();
+
+        let mut nav = make_nav(root.clone());
+        nav.nav_error = Some("stale error".into());
+
+        nav.expand_path_to_node(&child, false).unwrap();
+        assert!(nav.nav_error.is_none(), "expand_path_to_node must clear nav_error on success");
     }
 }
