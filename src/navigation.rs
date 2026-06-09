@@ -289,8 +289,7 @@ impl Navigation {
             if let Some(ref msg) = new_root.error_message {
                 self.nav_error = Some(msg.clone());
             } else if !new_root.is_dir {
-                self.nav_error =
-                    Some(format!("Directory not found: {}", new_root.path.display()));
+                self.nav_error = Some(format!("Directory not found: {}", new_root.path.display()));
             }
             return Ok(false);
         }
@@ -555,7 +554,10 @@ mod tests {
 
         let went_back = nav.go_back(false).unwrap();
         assert!(went_back);
-        assert!(nav.nav_error.is_none(), "go_back must clear nav_error on success");
+        assert!(
+            nav.nav_error.is_none(),
+            "go_back must clear nav_error on success"
+        );
     }
 
     #[test]
@@ -569,7 +571,10 @@ mod tests {
         nav.nav_error = Some("stale error".into());
 
         nav.go_to_parent(false).unwrap();
-        assert!(nav.nav_error.is_none(), "go_to_parent must clear nav_error on success");
+        assert!(
+            nav.nav_error.is_none(),
+            "go_to_parent must clear nav_error on success"
+        );
     }
 
     #[test]
@@ -583,7 +588,10 @@ mod tests {
         nav.nav_error = Some("stale error".into());
 
         nav.expand_path_to_node(&child, false).unwrap();
-        assert!(nav.nav_error.is_none(), "expand_path_to_node must clear nav_error on success");
+        assert!(
+            nav.nav_error.is_none(),
+            "expand_path_to_node must clear nav_error on success"
+        );
     }
 
     #[test]
@@ -601,8 +609,18 @@ mod tests {
         std::fs::remove_dir_all(&root).unwrap();
 
         let went_back = nav.go_back(false).unwrap();
-        assert!(!went_back, "go_back must return false for inaccessible directory");
-        assert_eq!(nav.history.len(), 1, "history entry must be re-pushed on failure");
-        assert!(nav.nav_error.is_some(), "nav_error must be set when go_back fails");
+        assert!(
+            !went_back,
+            "go_back must return false for inaccessible directory"
+        );
+        assert_eq!(
+            nav.history.len(),
+            1,
+            "history entry must be re-pushed on failure"
+        );
+        assert!(
+            nav.nav_error.is_some(),
+            "nav_error must be set when go_back fails"
+        );
     }
 }

@@ -319,7 +319,9 @@ impl UI {
                     Span::styled(error_icon, Style::default().fg(error_color)),
                     Span::styled(
                         msg_display,
-                        Style::default().fg(error_color).add_modifier(Modifier::BOLD),
+                        Style::default()
+                            .fg(error_color)
+                            .add_modifier(Modifier::BOLD),
                     ),
                     Span::styled(hints, Style::default().fg(header_hints_color)),
                 ])),
