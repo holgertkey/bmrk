@@ -192,6 +192,7 @@ fn query_cursor_position() -> (u16, u16) {
 
 /// Parse a VT100 cursor position report `ESC [ row ; col R` (1-based) into
 /// zero-based (col, row).
+#[cfg(unix)]
 fn parse_cpr_response(data: &[u8]) -> Option<(u16, u16)> {
     let s = std::str::from_utf8(data).ok()?;
     // Find the last ESC[ to skip any preceding input noise
