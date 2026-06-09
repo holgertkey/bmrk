@@ -280,11 +280,18 @@ impl Navigation {
             return Ok(false);
         };
 
-        let mut new_root = TreeNode::new(prev_path, 0)?;
+        let mut new_root = TreeNode::new(prev_path.clone(), 0)?;
         new_root.load_children(show_files, self.show_hidden, self.follow_symlinks)?;
         new_root.is_expanded = true;
 
-        if new_root.has_error {
+        if !new_root.is_dir || new_root.has_error {
+            self.history.push_back(prev_path);
+            if let Some(ref msg) = new_root.error_message {
+                self.nav_error = Some(msg.clone());
+            } else if !new_root.is_dir {
+                self.nav_error =
+                    Some(format!("Directory not found: {}", new_root.path.display()));
+            }
             return Ok(false);
         }
 
@@ -577,5 +584,25 @@ mod tests {
 
         nav.expand_path_to_node(&child, false).unwrap();
         assert!(nav.nav_error.is_none(), "expand_path_to_node must clear nav_error on success");
+    }
+
+    #[test]
+    fn go_back_preserves_history_entry_when_target_inaccessible() {
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path().to_path_buf();
+        let child = root.join("child");
+        std::fs::create_dir(&child).unwrap();
+
+        let mut nav = make_nav(root.clone());
+        nav.go_to_directory(child, false).unwrap();
+        assert_eq!(nav.history.len(), 1);
+
+        // Remove the previous root so go_back targets a missing directory
+        std::fs::remove_dir_all(&root).unwrap();
+
+        let went_back = nav.go_back(false).unwrap();
+        assert!(!went_back, "go_back must return false for inaccessible directory");
+        assert_eq!(nav.history.len(), 1, "history entry must be re-pushed on failure");
+        assert!(nav.nav_error.is_some(), "nav_error must be set when go_back fails");
     }
 }

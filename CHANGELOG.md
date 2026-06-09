@@ -58,6 +58,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `max_visible = 10`, making entries below the 10th unreachable in compact mode (which shows ~4–5
   rows). `UI::bookmark_panel_height` is now updated from the actual rendered area height each frame
   and passed to `bookmarks.scroll_down()`.
+- `navigation.rs`: `go_back` popped the history entry before checking whether the target
+  directory was accessible. If the target had been deleted or its disk disconnected, the entry
+  was silently dropped and `nav_error` was never set — pressing `u` appeared to do nothing with
+  no feedback. Now: if the resolved path is not a directory or `load_children` sets `has_error`,
+  the entry is pushed back into history and `nav_error` is set with a descriptive message.
 - `navigation.rs`: `go_back`, `go_to_parent`, and `expand_path_to_node` did not clear
   `nav_error` on success. After a failed bookmark jump the red error banner in the header
   persisted even after the user navigated away with `u` or by clicking a search result.
