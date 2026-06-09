@@ -8,7 +8,7 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
-use ratatui::{backend::CrosstermBackend, Terminal, TerminalOptions, Viewport};
+use ratatui::{backend::CrosstermBackend, layout::Rect, Terminal, TerminalOptions, Viewport};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU16, Ordering};
 
@@ -89,7 +89,7 @@ pub fn setup_terminal() -> Result<Terminal<CrosstermBackend<std::io::Stderr>>> {
 pub fn setup_terminal_compact() -> Result<Terminal<CrosstermBackend<std::io::Stderr>>> {
     install_panic_hook();
 
-    // Enable raw mode first (needed for cursor::position() on Unix).
+    // Enable raw mode first (needed for cursor position query on Unix).
     // If this fails we return immediately — nothing to clean up yet.
     enable_raw_mode()?;
 
@@ -101,17 +101,39 @@ pub fn setup_terminal_compact() -> Result<Terminal<CrosstermBackend<std::io::Std
         IS_COMPACT_MODE.store(false, Ordering::Relaxed);
     });
 
-    // Determine where our viewport will start after potential terminal scrolling.
-    // Viewport::Inline(N) scrolls the terminal up if the cursor is too close to
-    // the bottom, so we calculate the absolute start row in advance.
-    let (_, cursor_row) = crossterm::cursor::position().unwrap_or((0, 0));
-    let (_, terminal_height) = crossterm::terminal::size().unwrap_or((80, 24));
-    let start_row = if cursor_row + COMPACT_HEIGHT >= terminal_height {
-        terminal_height.saturating_sub(COMPACT_HEIGHT)
-    } else {
-        cursor_row
-    };
+    // Query cursor position via /dev/tty so it works even when stdout is a pipe
+    // (e.g. when launched from a shell subshell: result=$(bmrk "$@")).
+    // crossterm::cursor::position() writes \x1B[6n to stdout, which fails when
+    // stdout is piped. We write to stderr instead and read from /dev/tty directly.
+    let (_, cursor_row) = query_cursor_position();
+    let (term_width, term_height) = crossterm::terminal::size().unwrap_or((80, 24));
+
+    // Replicate ratatui's compute_inline_size logic:
+    //   1. Scroll the terminal to make room below the cursor.
+    //   2. Compute the fixed viewport rect (adjusting start row if terminal scrolled).
+    // Using Viewport::Fixed avoids any further cursor::position() calls during draws.
+    let max_height = term_height.min(COMPACT_HEIGHT);
+    let lines_after_cursor = COMPACT_HEIGHT.saturating_sub(1);
+    let available_lines = term_height.saturating_sub(cursor_row).saturating_sub(1);
+    let missing_lines = lines_after_cursor.saturating_sub(available_lines);
+
+    {
+        use std::io::Write;
+        for _ in 0..lines_after_cursor {
+            let _ = writeln!(std::io::stderr());
+        }
+        let _ = std::io::stderr().flush();
+    }
+
+    let start_row = cursor_row.saturating_sub(missing_lines);
     COMPACT_START_ROW.store(start_row, Ordering::Relaxed);
+
+    let viewport_area = Rect {
+        x: 0,
+        y: start_row,
+        width: term_width,
+        height: max_height,
+    };
 
     std::io::stderr().execute(EnableMouseCapture)?;
 
@@ -119,12 +141,71 @@ pub fn setup_terminal_compact() -> Result<Terminal<CrosstermBackend<std::io::Std
     let terminal = Terminal::with_options(
         backend,
         TerminalOptions {
-            viewport: Viewport::Inline(COMPACT_HEIGHT),
+            viewport: Viewport::Fixed(viewport_area),
         },
     )?;
 
     raw_guard.disarm(); // setup complete — cleanup_terminal_compact() owns teardown from here
     Ok(terminal)
+}
+
+/// Query cursor position by writing the CPR escape sequence to stderr and
+/// reading the response from /dev/tty. Works even when stdout is a pipe.
+/// Returns (col, row) zero-based, or (0, 0) on failure.
+#[cfg(unix)]
+fn query_cursor_position() -> (u16, u16) {
+    use std::io::{Read, Write};
+    use std::time::Duration;
+
+    if std::io::stderr().write_all(b"\x1B[6n").is_err()
+        || std::io::stderr().flush().is_err()
+    {
+        return (0, 0);
+    }
+
+    // Read the CPR response in a thread so we can enforce a timeout.
+    let Ok(mut tty) = std::fs::OpenOptions::new().read(true).open("/dev/tty") else {
+        return (0, 0);
+    };
+
+    let (tx, rx) = std::sync::mpsc::channel::<Vec<u8>>();
+    std::thread::spawn(move || {
+        let mut buf = Vec::with_capacity(16);
+        let mut byte = [0u8; 1];
+        loop {
+            match tty.read(&mut byte) {
+                Ok(1) => {
+                    buf.push(byte[0]);
+                    if byte[0] == b'R' {
+                        let _ = tx.send(buf);
+                        return;
+                    }
+                }
+                _ => return,
+            }
+        }
+    });
+
+    let data = rx.recv_timeout(Duration::from_millis(500)).unwrap_or_default();
+    parse_cpr_response(&data).unwrap_or((0, 0))
+}
+
+/// Parse a VT100 cursor position report `ESC [ row ; col R` (1-based) into
+/// zero-based (col, row).
+fn parse_cpr_response(data: &[u8]) -> Option<(u16, u16)> {
+    let s = std::str::from_utf8(data).ok()?;
+    // Find the last ESC[ to skip any preceding input noise
+    let after_esc = s.rsplit("\x1B[").next()?;
+    let inner = after_esc.strip_suffix('R')?;
+    let (row_s, col_s) = inner.split_once(';')?;
+    let row: u16 = row_s.parse().ok()?;
+    let col: u16 = col_s.parse().ok()?;
+    Some((col.saturating_sub(1), row.saturating_sub(1)))
+}
+
+#[cfg(not(unix))]
+fn query_cursor_position() -> (u16, u16) {
+    crossterm::cursor::position().unwrap_or((0, 0))
 }
 
 /// Clean up after compact inline mode.
