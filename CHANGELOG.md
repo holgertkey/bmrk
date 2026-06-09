@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-06-09
+
+### Fixed
+- `search.rs`: pressing `ESC` to cancel a background search sometimes did not stop disk activity
+  immediately. Root cause: the cancel signal was a single message in a `bounded(1)` channel —
+  once consumed by the deepest active recursive call, all parent levels continued iterating.
+  Replaced with an `Arc<AtomicBool>` flag that is visible to every level of the recursion
+  simultaneously and is not consumed on read. This also applies to the `MAX_SEARCH_RESULTS` early-stop path.
+- `terminal.rs`: removed `#[cfg(unix)]` mismatch — `parse_cpr_response` was compiled on all
+  platforms but only called from the `#[cfg(unix)]` `query_cursor_position`, producing a
+  dead-code warning on Windows. Added matching `#[cfg(unix)]` to the helper.
+
 ## [0.2.0] - 2026-06-09
 
 ### Added
@@ -206,6 +218,7 @@ The following entries document the dtree history that bmrk is based on.
 
 ---
 
-[Unreleased]: https://github.com/holgertkey/bmrk/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/holgertkey/bmrk/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/holgertkey/bmrk/compare/v0.2.0...v0.2.2
 [0.2.0]: https://github.com/holgertkey/bmrk/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/holgertkey/bmrk/releases/tag/v0.1.0

@@ -2,10 +2,14 @@
 #![allow(clippy::too_many_arguments)]
 
 use crate::tree_node::TreeNodeRef;
-use crossbeam_channel::{bounded, unbounded, Receiver, Sender};
+use crossbeam_channel::{unbounded, Receiver, Sender};
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::rc::Rc;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 use std::thread::{self, JoinHandle};
 
 /// Maximum number of search results to collect (prevents O(n²) dedup stall on broad queries)
@@ -49,7 +53,7 @@ pub struct Search {
     pub is_searching: bool,
     pub scanned_count: usize,
     search_thread: Option<JoinHandle<()>>,
-    cancel_sender: Option<Sender<()>>,
+    cancel_flag: Option<Arc<AtomicBool>>,
     result_receiver: Option<Receiver<SearchMessage>>,
 
     seen_paths: HashSet<PathBuf>, // O(1) deduplication across Phase 1 + Phase 2
@@ -75,7 +79,7 @@ impl Search {
             is_searching: false,
             scanned_count: 0,
             search_thread: None,
-            cancel_sender: None,
+            cancel_flag: None,
             result_receiver: None,
             seen_paths: HashSet::new(),
         }
@@ -265,7 +269,8 @@ impl Search {
         fuzzy: bool,
     ) {
         let (result_tx, result_rx) = unbounded();
-        let (cancel_tx, cancel_rx) = bounded(1);
+        let cancelled = Arc::new(AtomicBool::new(false));
+        let cancelled_thread = Arc::clone(&cancelled);
 
         // Clone root node for thread (Rc can't be sent across threads, so we need path)
         let root_path = root.borrow().path.clone();
@@ -279,7 +284,7 @@ impl Search {
                 &mut HashSet::new(),
                 &query,
                 &result_tx,
-                &cancel_rx,
+                &cancelled_thread,
                 show_files,
                 show_hidden,
                 follow_symlinks,
@@ -291,7 +296,7 @@ impl Search {
         });
 
         self.search_thread = Some(handle);
-        self.cancel_sender = Some(cancel_tx);
+        self.cancel_flag = Some(cancelled);
         self.result_receiver = Some(result_rx);
     }
 
@@ -301,7 +306,7 @@ impl Search {
         visited: &mut HashSet<PathBuf>,
         query: &str,
         result_tx: &Sender<SearchMessage>,
-        cancel_rx: &Receiver<()>,
+        cancelled: &Arc<AtomicBool>,
         show_files: bool,
         show_hidden: bool,
         follow_symlinks: bool,
@@ -312,7 +317,7 @@ impl Search {
         use fuzzy_matcher::FuzzyMatcher;
 
         // Check for cancellation
-        if cancel_rx.try_recv().is_ok() {
+        if cancelled.load(Ordering::Relaxed) {
             return;
         }
 
@@ -378,7 +383,7 @@ impl Search {
 
             if let Ok(entries) = std::fs::read_dir(path) {
                 for entry in entries.flatten() {
-                    if cancel_rx.try_recv().is_ok() {
+                    if cancelled.load(Ordering::Relaxed) {
                         return;
                     }
 
@@ -388,7 +393,7 @@ impl Search {
                         visited,
                         query,
                         result_tx,
-                        cancel_rx,
+                        cancelled,
                         show_files,
                         show_hidden,
                         follow_symlinks,
@@ -425,8 +430,8 @@ impl Search {
 
                             if self.results.len() >= MAX_SEARCH_RESULTS {
                                 // Enough results — stop the background thread
-                                if let Some(cancel_tx) = &self.cancel_sender {
-                                    let _ = cancel_tx.send(());
+                                if let Some(flag) = &self.cancel_flag {
+                                    flag.store(true, Ordering::Relaxed);
                                 }
                                 search_done = true;
                                 break;
@@ -454,7 +459,7 @@ impl Search {
         if search_done {
             self.is_searching = false;
             self.search_thread = None;
-            self.cancel_sender = None;
+            self.cancel_flag = None;
             self.result_receiver = None;
 
             // Sort results by score in fuzzy mode (highest score first)
@@ -475,10 +480,10 @@ impl Search {
 
     /// Cancel current search
     pub fn cancel_search(&mut self) {
-        if let Some(cancel_tx) = self.cancel_sender.take() {
-            let _ = cancel_tx.send(());
+        if let Some(flag) = self.cancel_flag.take() {
+            flag.store(true, Ordering::Relaxed);
         }
-        // Thread checks cancel_rx frequently — detach, no join needed
+        // Thread checks the flag frequently — detach, no join needed
         self.search_thread = None;
         self.result_receiver = None;
         self.is_searching = false;
