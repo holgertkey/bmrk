@@ -7,13 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-- `navigation.rs`: `go_to_directory` post-construction guard checked only `has_error`, missing
-  the `!is_dir` case. In a TOCTOU window (directory deleted or replaced by a file between the
-  pre-check and `TreeNode::new`), the node would have `is_dir = false, has_error = false`,
-  causing navigation to silently "succeed" — root replaced with a non-directory node, history
-  poisoned, `nav_error` cleared. Guard widened to `if !new_root.is_dir || new_root.has_error`,
-  consistent with `go_back` which already had the correct check.
+## [0.2.0] - 2026-06-09
+
+### Added
+- `ui.rs` / `tree_node.rs`: inaccessible directories are now visually marked in the tree with
+  a `⊘` icon (ascii: `!`) rendered in `error_color`. Detection is eager — `probe_has_children`
+  now sets `has_error` when `read_dir` fails, so the marker appears as soon as the parent
+  directory is expanded, without requiring the user to try to enter the folder.
 
 ### Changed
 - `navigation.rs`: `Navigation::history` is now a `VecDeque<PathBuf>` instead of `Vec<PathBuf>`.
@@ -32,13 +32,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `BTreeMap<String, Bookmark>`. `list()` now returns values in key order directly from the
   iterator (`values().collect()`), removing the per-call `sort_by_key` allocation.
 
-### Added
-- `ui.rs` / `tree_node.rs`: inaccessible directories are now visually marked in the tree with
-  a `⊘` icon (ascii: `!`) rendered in `error_color`. Detection is eager — `probe_has_children`
-  now sets `has_error` when `read_dir` fails, so the marker appears as soon as the parent
-  directory is expanded, without requiring the user to try to enter the folder.
-
 ### Fixed
+- `navigation.rs`: `go_to_directory` post-construction guard checked only `has_error`, missing
+  the `!is_dir` case. In a TOCTOU window (directory deleted or replaced by a file between the
+  pre-check and `TreeNode::new`), the node would have `is_dir = false, has_error = false`,
+  causing navigation to silently "succeed" — root replaced with a non-directory node, history
+  poisoned, `nav_error` cleared. Guard widened to `if !new_root.is_dir || new_root.has_error`,
+  consistent with `go_back` which already had the correct check.
 - `event_handler.rs` / `ui.rs` / `bookmarks.rs`: mouse had no effect in the bookmark selection
   panel. Single click now selects the item under the cursor, double-click navigates to the
   bookmark, and scroll wheel moves the selection — all without jumping to the center of the
@@ -206,5 +206,6 @@ The following entries document the dtree history that bmrk is based on.
 
 ---
 
-[Unreleased]: https://github.com/holgertkey/bmrk/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/holgertkey/bmrk/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/holgertkey/bmrk/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/holgertkey/bmrk/releases/tag/v0.1.0
